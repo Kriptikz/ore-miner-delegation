@@ -63,10 +63,8 @@ pub async fn init_program() -> (BanksClient, Keypair, Hash) {
         processor!(ore_miner_delegation::process_instruction),
     );
 
-    program_test.prefer_bpf(true);
-
     // Setup metadata program
-    let data = read_file(&"tests/buffers/metadata_program.bpf");
+    let data = read_file(&"tests/buffers/metadata_program.so");
     program_test.add_account(
         mpl_token_metadata::ID,
         Account {
