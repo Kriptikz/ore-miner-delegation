@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use solana_program::{
-    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     rent::Rent,
 };
@@ -9,15 +8,10 @@ use solana_program_test::{processor, read_file, BanksClient, ProgramTest};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
 #[tokio::test]
-async fn test_init() {
+async fn test_register_proof() {
     let (mut banks_client, payer) = init_program().await;
 
-
-    let ix = Instruction {
-        program_id: ore_miner_delegation::id(),
-        accounts: vec![AccountMeta::new(payer.pubkey(), true)],
-        data: [].into(),
-    };
+    let ix = ore_miner_delegation::instruction::register_proof(payer.pubkey());
 
     let mut tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
 
@@ -32,6 +26,11 @@ async fn test_init() {
         .process_transaction(tx)
         .await
         .expect("process_transaction should be ok");
+
+
+    // Verify ore::Proof data
+
+    // Verify ManagedProof data
 }
 
 pub async fn init_program() -> (BanksClient, Keypair) {
