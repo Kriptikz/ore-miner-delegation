@@ -11,6 +11,7 @@ use crate::{
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct ManagedProof {
     pub bump: u8,
+    pub authority_bump: u8,
 }
 
 impl Discriminator for ManagedProof {

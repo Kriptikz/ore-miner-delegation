@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
-use ore::utils::AccountDeserialize;
+use ore::utils::AccountDeserialize as _;
+use ore_miner_delegation::utils::AccountDeserialize as _;
 use solana_program::{
     pubkey::Pubkey,
     rent::Rent, system_instruction,
@@ -12,11 +13,12 @@ use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transacti
 async fn test_register_proof() {
     let (mut banks_client, payer) = init_program().await;
 
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof", payer.pubkey().as_ref()], &ore_miner_delegation::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore::PROOF, managed_proof_account.0.as_ref()], &ore::id());
+    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let ore_proof_account = Pubkey::find_program_address(&[ore::PROOF, managed_proof_authority.0.as_ref()], &ore::id());
 
     // TODO: move transfer into register_proof program ix
-    let ix0 = system_instruction::transfer(&payer.pubkey(), &managed_proof_account.0, 100000000);
+    let ix0 = system_instruction::transfer(&payer.pubkey(), &managed_proof_authority.0, 100000000);
     let ix = ore_miner_delegation::instruction::register_proof(payer.pubkey());
 
     let mut tx = Transaction::new_with_payer(&[ix0, ix], Some(&payer.pubkey()));
@@ -51,6 +53,19 @@ async fn test_register_proof() {
     assert_eq!(0, ore_proof.balance, "Newly created proof account balance should be 0");
 
     // Verify ManagedProof data
+    let managed_proof = banks_client.get_account(managed_proof_account.0).await;
+
+    assert!(managed_proof.is_ok(), "should get account info from banks_client");
+    let managed_proof = managed_proof.unwrap();
+    assert!(managed_proof.is_some(), "ore proof account should exist now");
+
+    let managed_proof_account_info = managed_proof.unwrap();
+
+    let managed_proof = ore_miner_delegation::state::ManagedProof::try_from_bytes(&managed_proof_account_info.data);
+    assert!(managed_proof.is_ok());
+
+    let managed_proof = managed_proof.unwrap();
+    assert_eq!(managed_proof_account.1, managed_proof.bump, "ManagedProof account created with invalid bump");
 }
 
 pub async fn init_program() -> (BanksClient, Keypair) {
