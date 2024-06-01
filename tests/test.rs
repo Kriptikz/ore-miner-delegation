@@ -1,8 +1,9 @@
 use std::str::FromStr;
 
+use ore::utils::AccountDeserialize;
 use solana_program::{
     pubkey::Pubkey,
-    rent::Rent,
+    rent::Rent, system_instruction,
 };
 use solana_program_test::{processor, read_file, BanksClient, ProgramTest};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
@@ -11,9 +12,14 @@ use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transacti
 async fn test_register_proof() {
     let (mut banks_client, payer) = init_program().await;
 
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof", payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let ore_proof_account = Pubkey::find_program_address(&[ore::PROOF, managed_proof_account.0.as_ref()], &ore::id());
+
+    // TODO: move transfer into register_proof program ix
+    let ix0 = system_instruction::transfer(&payer.pubkey(), &managed_proof_account.0, 100000000);
     let ix = ore_miner_delegation::instruction::register_proof(payer.pubkey());
 
-    let mut tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix0, ix], Some(&payer.pubkey()));
 
     let blockhash = banks_client
         .get_latest_blockhash()
@@ -29,6 +35,20 @@ async fn test_register_proof() {
 
 
     // Verify ore::Proof data
+    let ore_proof = banks_client.get_account(ore_proof_account.0).await;
+
+    assert!(ore_proof.is_ok(), "should get account info from banks_client");
+    let ore_proof = ore_proof.unwrap();
+    assert!(ore_proof.is_some(), "ore proof account should exist now");
+
+    let ore_proof_account_info = ore_proof.unwrap();
+
+    let ore_proof = ore::state::Proof::try_from_bytes(&ore_proof_account_info.data);
+    assert!(ore_proof.is_ok());
+
+    let ore_proof = ore_proof.unwrap();
+
+    assert_eq!(0, ore_proof.balance, "Newly created proof account balance should be 0");
 
     // Verify ManagedProof data
 }
