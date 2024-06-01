@@ -92,7 +92,7 @@ pub async fn init_program() -> (BanksClient, Keypair) {
     // Add Ore Program account
     let data = read_file(&"tests/buffers/ore.so");
     program_test.add_account(
-        Pubkey::from_str("oreFHcE6FvJTrsfaYca4mVeZn7J7T6oZS9FAvW9eg4q").unwrap(),
+        ore::id(),
         Account {
             lamports: Rent::default().minimum_balance(data.len()).max(1),
             data,
