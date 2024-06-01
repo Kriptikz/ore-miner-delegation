@@ -42,7 +42,6 @@ pub fn process_register_proof(
     solana_program::program::invoke_signed(
         &ore::instruction::register(managed_proof_pda.0),
         &[
-            fee_payer.clone(),
             managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
