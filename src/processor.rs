@@ -93,6 +93,7 @@ pub fn process_register_proof(
     
     parsed_data.bump = managed_proof_account_pda.1;
     parsed_data.authority_bump = managed_proof_authority_pda.1;
+    parsed_data.total_delegated = 1;
 
 
     Ok(())

@@ -12,6 +12,8 @@ use crate::{
 pub struct ManagedProof {
     pub bump: u8,
     pub authority_bump: u8,
+    _pad: [u8; 6],
+    pub total_delegated: u64,
 }
 
 impl Discriminator for ManagedProof {

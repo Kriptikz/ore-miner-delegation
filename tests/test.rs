@@ -66,6 +66,7 @@ async fn test_register_proof() {
 
     let managed_proof = managed_proof.unwrap();
     assert_eq!(managed_proof_account.1, managed_proof.bump, "ManagedProof account created with invalid bump");
+    assert_eq!(1, managed_proof.total_delegated, "ManagedProof account created with invalid total delegated amount");
 }
 
 pub async fn init_program() -> (BanksClient, Keypair) {
