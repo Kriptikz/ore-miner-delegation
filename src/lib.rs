@@ -1,5 +1,5 @@
 use instruction::Instructions;
-use processor::process_mine;
+use processor::{process_mine, process_init_delegate_stake};
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey,
@@ -39,9 +39,12 @@ pub fn process_instruction(
     match instruction {
         Instructions::RegisterProof => {
             process_register_proof(accounts, data)?;
-        }
+        },
         Instructions::Mine => {
             process_mine(accounts, data)?;
+        },
+        Instructions::InitDelegateStake => {
+            process_init_delegate_stake(accounts, data)?;
         }
     }
 

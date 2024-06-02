@@ -93,7 +93,7 @@ async fn test_register_proof() {
         "ManagedProof account created with invalid bump"
     );
     assert_eq!(
-        1, managed_proof.total_delegated,
+        0, managed_proof.total_delegated,
         "ManagedProof account created with invalid total delegated amount"
     );
     assert_eq!(
@@ -104,6 +104,94 @@ async fn test_register_proof() {
 }
 
 #[tokio::test]
+pub async fn test_init_delegate_stake_account() {
+    let mut context = init_program().await;
+
+    let managed_proof_authority = Pubkey::find_program_address(
+        &[b"managed-proof-authority", context.payer.pubkey().as_ref()],
+        &ore_miner_delegation::id(),
+    );
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
+
+
+    // TODO: move transfer into register_proof program ix
+    let ix0 = system_instruction::transfer(
+        &context.payer.pubkey(),
+        &managed_proof_authority.0,
+        100000000,
+    );
+    let ix = ore_miner_delegation::instruction::register_proof(context.payer.pubkey());
+
+    let mut tx = Transaction::new_with_payer(&[ix0, ix], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+
+    // Create the DelegatedStake Accont
+    let ix =
+        ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
+
+    let mut tx =
+        Transaction::new_with_payer(&[ix], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+
+    // Verify miner's delegate stake account amount
+    let delegated_stake = context.banks_client.get_account(delegated_stake_account.0).await;
+
+    assert!(
+        delegated_stake.is_ok(),
+        "should get account info from banks_client"
+    );
+    let delegated_stake = delegated_stake.unwrap();
+    assert!(
+        delegated_stake.is_some(),
+        "delegated_stake account should exist now"
+    );
+
+    let delegated_stake_account_info = delegated_stake.unwrap();
+
+    let delegated_stake =
+        ore_miner_delegation::state::DelegatedStake::try_from_bytes(&delegated_stake_account_info.data);
+    assert!(delegated_stake.is_ok());
+
+    let delegated_stake = delegated_stake.unwrap();
+    assert_eq!(
+        delegated_stake_account.1, delegated_stake.bump,
+        "DelegatedStake account created with invalid bump"
+    );
+
+    assert_eq!(0, delegated_stake.amount);
+}
+
+
+#[tokio::test]
 pub async fn test_mine() {
     let mut context = init_program().await;
 
@@ -111,7 +199,8 @@ pub async fn test_mine() {
         &[b"managed-proof-authority", context.payer.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
-    // let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
     let ore_proof_account = Pubkey::find_program_address(
         &[ore::PROOF, managed_proof_authority.0.as_ref()],
         &ore::id(),
@@ -125,7 +214,9 @@ pub async fn test_mine() {
     );
     let ix = ore_miner_delegation::instruction::register_proof(context.payer.pubkey());
 
-    let mut tx = Transaction::new_with_payer(&[ix0, ix], Some(&context.payer.pubkey()));
+    let ix_delegate_stake =
+        ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
+    let mut tx = Transaction::new_with_payer(&[ix0, ix, ix_delegate_stake], Some(&context.payer.pubkey()));
 
     let blockhash = context
         .banks_client
@@ -213,10 +304,31 @@ pub async fn test_mine() {
         .expect("process_transaction should be ok");
 
     // Verify proof account balance is updated
+    let ore_proof = context
+        .banks_client
+        .get_account(ore_proof_account.0)
+        .await
+        .unwrap()
+        .unwrap();
+    let ore_proof = ore::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+    assert!(ore_proof.balance > 0);
 
     // Verify managed proof account total_delegated
+    let managed_proof = context
+        .banks_client
+        .get_account(managed_proof_account.0)
+        .await
+        .unwrap()
+        .unwrap();
+    let managed_proof = ore_miner_delegation::state::ManagedProof::try_from_bytes(&managed_proof.data).unwrap();
+    assert!(managed_proof.total_delegated > 0);
 
     // Verify miner's delegate stake account mount
+    let delegated_stake = context.banks_client.get_account(delegated_stake_account.0).await.unwrap().unwrap();
+    let delegated_stake =
+        ore_miner_delegation::state::DelegatedStake::try_from_bytes(&delegated_stake.data).unwrap();
+
+    assert!(delegated_stake.amount > 0);
 }
 
 pub async fn init_program() -> ProgramTestContext {

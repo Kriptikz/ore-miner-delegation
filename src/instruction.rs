@@ -12,6 +12,7 @@ use crate::{impl_to_bytes, impl_instruction_from_bytes};
 #[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
 pub enum Instructions {
     RegisterProof,
+    InitDelegateStake,
     Mine,
 }
 
@@ -56,6 +57,35 @@ pub fn register_proof(
     }
 }
 
+pub fn init_delegate_stake(
+    payer: Pubkey,
+    miner: Pubkey,
+) -> Instruction {
+    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(&[ore::PROOF, managed_proof_authority.0.as_ref()], &ore::id());
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
+
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(miner, false),
+            AccountMeta::new(managed_proof_authority.0, false),
+            AccountMeta::new(managed_proof_account.0, false),
+            AccountMeta::new(ore_proof_account.0, false),
+            AccountMeta::new(delegated_stake_account.0, false),
+            AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
+            AccountMeta::new_readonly(sysvar::instructions::id(), false),
+            AccountMeta::new_readonly(sysvar::rent::id(), false),
+            AccountMeta::new_readonly(ore::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+        data: Instructions::InitDelegateStake.into(),
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct MineArgs {
@@ -68,6 +98,8 @@ pub fn mine(payer: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
     let ore_proof_account = Pubkey::find_program_address(&[ore::PROOF, managed_proof_authority.0.as_ref()], &ore::id());
     let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", payer.as_ref()], &crate::id());
 
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+
     Instruction {
         program_id: crate::id(),
         accounts: vec![
@@ -77,6 +109,7 @@ pub fn mine(payer: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
             AccountMeta::new(bus, false),
             AccountMeta::new_readonly(ore::CONFIG_ADDRESS, false),
             AccountMeta::new(ore_proof_account.0, false),
+            AccountMeta::new(delegated_stake_account.0, false),
             AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
             AccountMeta::new_readonly(sysvar::instructions::id(), false),
             AccountMeta::new_readonly(sysvar::rent::id(), false),
