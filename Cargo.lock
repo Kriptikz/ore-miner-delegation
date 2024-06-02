@@ -2584,6 +2584,7 @@ name = "ore-miner-delegation"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "drillx",
  "mpl-token-metadata",
  "num_enum 0.7.2",
  "ore-program",
