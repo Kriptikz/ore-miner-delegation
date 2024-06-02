@@ -5,6 +5,7 @@ use solana_program::program_error::ProgramError;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
 pub enum AccountDiscriminator {
     ManagedProof = 100,
+    DelegatedStake = 101,
 }
 
 pub trait Discriminator {
