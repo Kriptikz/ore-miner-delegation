@@ -1,14 +1,13 @@
 use std::mem::size_of;
 
-use ore::utils::AccountDeserialize as _;
-// use crate::utils::AccountDeserialize as _;
+use ore_utils::AccountDeserialize as _;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
 use crate::{state::{ManagedProof, DelegatedStake}, utils::{AccountDeserialize, Discriminator}, instruction::MineArgs};
 
-pub fn process_register_proof(
+pub fn process_open_proof(
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
@@ -27,7 +26,7 @@ pub fn process_register_proof(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    msg!("Register Proof");
+    msg!("Open Proof Account");
 
     if !managed_proof_account_info.is_writable {
         return Err(ProgramError::InvalidAccountData);
@@ -37,7 +36,7 @@ pub fn process_register_proof(
         return Err(ProgramError::AccountAlreadyInitialized);
     }
 
-    if *ore_program.key != ore::id() {
+    if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
     }
 
@@ -51,9 +50,10 @@ pub fn process_register_proof(
 
     // CPI to create the proof account
     solana_program::program::invoke_signed(
-        &ore::instruction::register(managed_proof_authority_pda.0),
+        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *fee_payer.key),
         &[
             managed_proof_authority_info.clone(),
+            fee_payer.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
             rent_sysvar.clone(),
@@ -234,7 +234,7 @@ pub fn process_mine(
         return Err(ProgramError::UninitializedAccount);
     }
 
-    if *ore_program.key != ore::id() {
+    if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
     }
 
@@ -242,11 +242,13 @@ pub fn process_mine(
         return Err(ProgramError::IncorrectProgramId);
     }
 
+    // Need to use find_program_address here because I need the pda's bump.
+    // Should store this in the managed_proof_account data.
     let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", fee_payer.key.as_ref()], &crate::id());
     let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", fee_payer.key.as_ref()], &crate::id());
 
     let balance_before = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
-        let ore_proof = ore::state::Proof::try_from_bytes(&data)?;
+        let ore_proof = ore_api::state::Proof::try_from_bytes(&data)?;
         ore_proof.balance
     } else {
         return Err(ProgramError::AccountBorrowFailed);
@@ -256,7 +258,7 @@ pub fn process_mine(
     //
     let solution = drillx::Solution::new(args.digest, args.nonce);
     solana_program::program::invoke_signed(
-        &ore::instruction::mine(managed_proof_authority_pda.0, *ore_bus_account_info.key, solution),
+        &ore_api::instruction::mine(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *ore_bus_account_info.key, solution),
         &[
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
@@ -271,7 +273,7 @@ pub fn process_mine(
     )?;
 
     let balance_after = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
-        let ore_proof = ore::state::Proof::try_from_bytes(&data)?;
+        let ore_proof = ore_api::state::Proof::try_from_bytes(&data)?;
         ore_proof.balance
     } else {
         return Err(ProgramError::AccountBorrowFailed);

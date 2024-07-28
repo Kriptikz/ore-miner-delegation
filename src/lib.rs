@@ -5,7 +5,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey,
 };
 
-use crate::processor::process_register_proof;
+use crate::processor::process_open_proof;
 
 
 pub mod instruction;
@@ -38,7 +38,7 @@ pub fn process_instruction(
 
     match instruction {
         Instructions::RegisterProof => {
-            process_register_proof(accounts, data)?;
+            process_open_proof(accounts, data)?;
         },
         Instructions::Mine => {
             process_mine(accounts, data)?;

@@ -1,5 +1,6 @@
 use drillx::equix;
-use ore::{utils::AccountDeserialize as _, BUS_ADDRESSES};
+use ore_api::consts::BUS_ADDRESSES;
+use ore_utils::AccountDeserialize as _;
 use ore_miner_delegation::utils::AccountDeserialize as _;
 use solana_program::{clock::Clock, pubkey::Pubkey, rent::Rent, system_instruction};
 use solana_program_test::{processor, read_file, ProgramTest, ProgramTestContext};
@@ -24,8 +25,8 @@ async fn test_register_proof() {
         &ore_miner_delegation::id(),
     );
     let ore_proof_account = Pubkey::find_program_address(
-        &[ore::PROOF, managed_proof_authority.0.as_ref()],
-        &ore::id(),
+        &[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()],
+        &ore_api::id(),
     );
 
     // TODO: move transfer into register_proof program ix
@@ -58,7 +59,7 @@ async fn test_register_proof() {
 
     let ore_proof_account_info = ore_proof.unwrap();
 
-    let ore_proof = ore::state::Proof::try_from_bytes(&ore_proof_account_info.data);
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof_account_info.data);
     assert!(ore_proof.is_ok());
 
     let ore_proof = ore_proof.unwrap();
@@ -202,8 +203,8 @@ pub async fn test_mine() {
     let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
     let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
     let ore_proof_account = Pubkey::find_program_address(
-        &[ore::PROOF, managed_proof_authority.0.as_ref()],
-        &ore::id(),
+        &[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()],
+        &ore_api::id(),
     );
 
     // TODO: move transfer into register_proof program ix
@@ -239,7 +240,7 @@ pub async fn test_mine() {
         .await
         .unwrap()
         .unwrap();
-    let ore_proof = ore::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
 
     let proof = ore_proof.clone();
 
@@ -254,7 +255,7 @@ pub async fn test_mine() {
             drillx::hash_with_memory(&mut memory, &proof.challenge, &nonce.to_le_bytes())
         {
             let new_difficulty = hx.difficulty();
-            if new_difficulty.ge(&ore::MIN_DIFFICULTY) {
+            if new_difficulty.gt(&ore_api::consts::INITIAL_MIN_DIFFICULTY) {
                 hash = hx;
                 nonce = nonce;
 
@@ -280,14 +281,18 @@ pub async fn test_mine() {
     // Submit solution
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
-    let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(500000);
-    let ix0 = ore::instruction::reset(context.payer.pubkey());
+
+    let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(600000);
+    let ix0 = ore_api::instruction::reset(context.payer.pubkey());
+    
+    // Set ix1 to be the proof declaration authentication
+    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
 
     let ix =
         ore_miner_delegation::instruction::mine(context.payer.pubkey(), BUS_ADDRESSES[0], solution);
 
     let mut tx =
-        Transaction::new_with_payer(&[cu_limit_ix, ix0, ix], Some(&context.payer.pubkey()));
+        Transaction::new_with_payer(&[cu_limit_ix, proof_declaration, ix0, ix], Some(&context.payer.pubkey()));
 
     let blockhash = context
         .banks_client
@@ -310,7 +315,7 @@ pub async fn test_mine() {
         .await
         .unwrap()
         .unwrap();
-    let ore_proof = ore::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
     assert!(ore_proof.balance > 0);
 
     // Verify managed proof account total_delegated
@@ -354,7 +359,7 @@ pub async fn init_program() -> ProgramTestContext {
     // Add Ore Program account
     let data = read_file(&"tests/buffers/ore.so");
     program_test.add_account(
-        ore::id(),
+        ore_api::id(),
         Account {
             lamports: Rent::default().minimum_balance(data.len()).max(1),
             data,
@@ -370,7 +375,7 @@ pub async fn init_program() -> ProgramTestContext {
     // TODO: initialize can only be called by the AUTHORIZED_INITIALIZER.
     // Will need to create the necessary accounts directly instead of using
     // the initialize instruction.
-    let ix = ore::instruction::initialize(context.payer.pubkey());
+    let ix = ore_api::instruction::initialize(context.payer.pubkey());
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&context.payer.pubkey()),

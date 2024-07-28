@@ -671,15 +671,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
 
 [[package]]
-name = "bs58"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
-dependencies = [
- "tinyvec",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1241,10 +1232,13 @@ checksum = "1435fa1053d8b2fbbe9be7e97eca7f33d37b28409959813daefc1446a14247f1"
 
 [[package]]
 name = "drillx"
-version = "0.2.0"
+version = "2.0.0-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bc503e6662deb892b18b41e6d23d2604d7a7804c00d4b84e1d58ecf22daa61c"
 dependencies = [
  "blake3",
  "equix",
+ "serde",
  "solana-program",
  "strum 0.26.2",
 ]
@@ -2580,6 +2574,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ore-api"
+version = "2.0.0-beta.4"
+dependencies = [
+ "array-const-fn-init",
+ "bytemuck",
+ "const-crypto",
+ "drillx",
+ "mpl-token-metadata",
+ "num_enum 0.7.2",
+ "ore-utils",
+ "shank",
+ "solana-program",
+ "spl-associated-token-account 2.3.0",
+ "spl-token",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
 name = "ore-miner-delegation"
 version = "0.1.0"
 dependencies = [
@@ -2587,7 +2600,8 @@ dependencies = [
  "drillx",
  "mpl-token-metadata",
  "num_enum 0.7.2",
- "ore-program",
+ "ore-api",
+ "ore-utils",
  "solana-program",
  "solana-program-test",
  "solana-sdk",
@@ -2597,22 +2611,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ore-program"
-version = "2.0.0"
+name = "ore-utils"
+version = "2.0.0-beta.4"
 dependencies = [
- "array-const-fn-init",
- "bs58 0.5.1",
  "bytemuck",
- "const-crypto",
- "drillx",
- "mpl-token-metadata",
- "num_enum 0.7.2",
- "shank",
  "solana-program",
  "spl-associated-token-account 2.3.0",
  "spl-token",
- "static_assertions",
- "thiserror",
 ]
 
 [[package]]
@@ -3674,7 +3679,7 @@ dependencies = [
  "Inflector",
  "base64 0.21.7",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "bv",
  "lazy_static",
  "serde",
@@ -3984,7 +3989,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c00a6aca244dfa904e2c4a26406ba7b0987344ceaec932f3cda0b35eff0babc"
 dependencies = [
  "block-buffer 0.10.4",
- "bs58 0.4.0",
+ "bs58",
  "bv",
  "either",
  "generic-array",
@@ -4137,7 +4142,7 @@ dependencies = [
  "borsh 0.10.3",
  "borsh 0.9.3",
  "borsh 1.5.1",
- "bs58 0.4.0",
+ "bs58",
  "bv",
  "bytemuck",
  "cc",
@@ -4323,7 +4328,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "indicatif",
  "log",
  "reqwest",
@@ -4347,7 +4352,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0aea25d581de77ba256b81f4ebd8d963b85ec01d70a74829365e85f6403d497"
 dependencies = [
  "base64 0.21.7",
- "bs58 0.4.0",
+ "bs58",
  "jsonrpc-core",
  "reqwest",
  "semver",
@@ -4463,7 +4468,7 @@ dependencies = [
  "bincode",
  "bitflags 2.5.0",
  "borsh 1.5.1",
- "bs58 0.4.0",
+ "bs58",
  "bytemuck",
  "byteorder",
  "chrono",
@@ -4513,7 +4518,7 @@ version = "1.18.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95ef2ea49002d1bf52a4a8509570b2c3b88e7b6d0a131b11bbd637ca1e1df0ff"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -4653,7 +4658,7 @@ dependencies = [
  "base64 0.21.7",
  "bincode",
  "borsh 0.10.3",
- "bs58 0.4.0",
+ "bs58",
  "lazy_static",
  "log",
  "serde",
