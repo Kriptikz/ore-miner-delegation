@@ -1,5 +1,5 @@
 use drillx::equix;
-use ore_api::consts::BUS_ADDRESSES;
+use ore_api::consts::{BUS_ADDRESSES, NOOP_PROGRAM_ID};
 use ore_utils::AccountDeserialize as _;
 use ore_miner_delegation::utils::AccountDeserialize as _;
 use solana_program::{clock::Clock, pubkey::Pubkey, rent::Rent, system_instruction};
@@ -282,7 +282,7 @@ pub async fn test_mine() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
 
-    let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(600000);
+    let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(700000);
     let ix0 = ore_api::instruction::reset(context.payer.pubkey());
     
     // Set ix1 to be the proof declaration authentication
@@ -341,6 +341,19 @@ pub async fn init_program() -> ProgramTestContext {
         "ore_miner_delegation",
         ore_miner_delegation::id(),
         processor!(ore_miner_delegation::process_instruction),
+    );
+
+    // Add Noop Program
+    let data = read_file(&"tests/buffers/noop.so");
+    program_test.add_account(
+        NOOP_PROGRAM_ID,
+        Account {
+            lamports: Rent::default().minimum_balance(data.len()).max(1),
+            data,
+            owner: solana_sdk::bpf_loader::id(),
+            executable: true,
+            rent_epoch: 0,
+        },
     );
 
     // Add Metadata Program account
