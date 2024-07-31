@@ -285,13 +285,31 @@ pub fn process_mine(
 
     let miners_delegated_rewards = if let Ok(data) = managed_proof_account_info.data.try_borrow() {
         let managed_proof = crate::state::ManagedProof::try_from_bytes(&data)?;
+        // Calculate the miners rewards subtracting the stakers commission
         let miner_rewards_earned = if let Some(difference) = balance_after.checked_sub(balance_before) {
             difference - ((difference as f64).mul(managed_proof.commission as f64 / 100.0)) as u64
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         };
-        let ratio = (balance_after as f64).div(managed_proof.total_delegated as f64);
-        (miner_rewards_earned as f64).mul(ratio) as u64
+
+        // Calculate the miners delegated_amount based on the delegated to actual balance ratio
+        if managed_proof.total_delegated == balance_before {
+            miner_rewards_earned
+        } else {
+            if let Some(amount) = (miner_rewards_earned as u128).checked_mul(managed_proof.total_delegated as u128) {
+                if let Some(amount) = amount.checked_div(balance_before as u128) {
+                    if let Ok(amount) = amount.try_into() {
+                        amount
+                    } else {
+                        return Err(ProgramError::ArithmeticOverflow);
+                    }
+                } else {
+                    return Err(ProgramError::ArithmeticOverflow);
+                }
+            } else {
+                return Err(ProgramError::ArithmeticOverflow);
+            }
+        }
     } else {
         return Err(ProgramError::AccountBorrowFailed);
     };
