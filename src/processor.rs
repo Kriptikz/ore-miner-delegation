@@ -5,7 +5,7 @@ use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
-use crate::{instruction::{MineArgs, OpenManagedProofArgs}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
+use crate::{instruction::{DelegateStakeArgs, MineArgs, OpenManagedProofArgs}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
 pub fn process_open_managed_proof(
     accounts: &[AccountInfo],
@@ -339,5 +339,130 @@ pub fn process_mine(
     }
 
 
+    Ok(())
+}
+
+pub fn process_delegate_stake(
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> Result<(), ProgramError> {
+    let [
+        fee_payer,
+        miner_authority_info,
+        managed_proof_authority_info,
+        managed_proof_account_info,
+        ore_config_account_info,
+        ore_proof_account_info,
+        delegated_stake_account_info,
+        treasury,
+        ore_program,
+        token_program,
+    ] =
+        accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    // Parse args
+    let args = DelegateStakeArgs::try_from_bytes(instruction_data)?;
+
+    if !managed_proof_account_info.is_writable {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if managed_proof_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if ore_config_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if ore_proof_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if delegated_stake_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if treasury.data_is_empty() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if *ore_program.key != ore_api::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if *token_program.key != spl_token::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    // Need to use find_program_address here because I need the pda's bump.
+    // Should store this in the managed_proof_account data.
+    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", miner_authority_info.key.as_ref()], &crate::id());
+    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", miner_authority_info.key.as_ref()], &crate::id());
+    if managed_proof_account_pda.0 != *managed_proof_account_info.key {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let proof_balance = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
+        let ore_proof = ore_api::state::Proof::try_from_bytes(&data)?;
+        ore_proof.balance
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
+    };
+
+    solana_program::program::invoke_signed(
+        &ore_api::instruction::stake(managed_proof_authority_pda.0, *fee_payer.key, args.amount),
+        &[
+            managed_proof_authority_info.clone(),
+            ore_proof_account_info.clone(),
+            fee_payer.clone(),
+            treasury.clone(),
+            ore_program.clone(),
+        ],
+        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+    )?;
+
+    if let Ok(mut data) = managed_proof_account_info.data.try_borrow_mut() {
+        let managed_proof = crate::state::ManagedProof::try_from_bytes_mut(&mut data)?;
+
+        let delegated_amount = if managed_proof.total_delegated == proof_balance {
+            args.amount
+        } else {
+            if let Some(amount) = (args.amount as u128).checked_mul(managed_proof.total_delegated as u128) {
+                if let Some(amount) = amount.checked_div(proof_balance as u128) {
+                    if let Ok(amount) = amount.try_into() {
+                        amount
+                    } else {
+                        return Err(ProgramError::ArithmeticOverflow);
+                    }
+                } else {
+                    return Err(ProgramError::ArithmeticOverflow);
+                }
+            } else {
+                return Err(ProgramError::ArithmeticOverflow);
+            }
+        };
+
+
+        if let Some(new_total) = managed_proof.total_delegated.checked_add(delegated_amount) {
+            managed_proof.total_delegated = new_total;
+            if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
+                let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
+
+                if let Some(new_total) = delegated_stake.amount.checked_add(delegated_amount) {
+                    delegated_stake.amount = new_total;
+                } else {
+                    return Err(ProgramError::ArithmeticOverflow);
+                }
+            }
+        } else {
+            return Err(ProgramError::ArithmeticOverflow);
+        }
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
+    }
     Ok(())
 }

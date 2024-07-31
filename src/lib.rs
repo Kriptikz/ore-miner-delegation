@@ -1,5 +1,5 @@
 use instruction::Instructions;
-use processor::{process_init_delegate_stake, process_mine, process_open_managed_proof};
+use processor::{process_delegate_stake, process_init_delegate_stake, process_mine, process_open_managed_proof};
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey,
@@ -42,6 +42,9 @@ pub fn process_instruction(
         },
         Instructions::InitDelegateStake => {
             process_init_delegate_stake(accounts, data)?;
+        }
+        Instructions::DelegateStake => {
+            process_delegate_stake(accounts, data)?;
         }
     }
 
