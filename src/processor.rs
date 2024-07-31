@@ -1,15 +1,15 @@
-use std::mem::size_of;
+use std::{mem::size_of, ops::{Div, Mul}};
 
 use ore_utils::AccountDeserialize as _;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
-use crate::{state::{ManagedProof, DelegatedStake}, utils::{AccountDeserialize, Discriminator}, instruction::MineArgs};
+use crate::{instruction::{MineArgs, OpenManagedProofArgs}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
-pub fn process_open_proof(
+pub fn process_open_managed_proof(
     accounts: &[AccountInfo],
-    _instruction_data: &[u8],
+    instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
     let [
         fee_payer,
@@ -27,6 +27,8 @@ pub fn process_open_proof(
     };
 
     msg!("Open Proof Account");
+    // Parse args
+    let args = OpenManagedProofArgs::try_from_bytes(instruction_data)?;
 
     if !managed_proof_account_info.is_writable {
         return Err(ProgramError::InvalidAccountData);
@@ -98,6 +100,7 @@ pub fn process_open_proof(
     parsed_data.authority_bump = managed_proof_authority_pda.1;
     parsed_data.total_delegated = 0;
     parsed_data.miner_authority = *fee_payer.key;
+    parsed_data.commission = args.commission;
 
 
     Ok(())
@@ -279,33 +282,44 @@ pub fn process_mine(
         return Err(ProgramError::AccountBorrowFailed);
     };
 
-    let balance_diff = if let Some(difference) = balance_after.checked_sub(balance_before) {
-        difference
+
+    let miners_delegated_rewards = if let Ok(data) = managed_proof_account_info.data.try_borrow() {
+        let managed_proof = crate::state::ManagedProof::try_from_bytes(&data)?;
+        let miner_rewards_earned = if let Some(difference) = balance_after.checked_sub(balance_before) {
+            difference - ((difference as f64).mul(managed_proof.commission as f64 / 100.0)) as u64
+        } else {
+            return Err(ProgramError::ArithmeticOverflow);
+        };
+        let ratio = (balance_after as f64).div(managed_proof.total_delegated as f64);
+        (miner_rewards_earned as f64).mul(ratio) as u64
     } else {
-        return Err(ProgramError::ArithmeticOverflow);
+        return Err(ProgramError::AccountBorrowFailed);
     };
+
+
+    // Update the Miners DelegatedStake amount
+    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
+        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
+
+        if let Some(new_total) = delegated_stake.amount.checked_add(miners_delegated_rewards) {
+            delegated_stake.amount = new_total;
+        } else {
+            return Err(ProgramError::ArithmeticOverflow);
+        }
+    }
+
 
     // Update the ManagedProof total delegated
     if let Ok(mut data) = managed_proof_account_info.data.try_borrow_mut() {
         let managed_proof = crate::state::ManagedProof::try_from_bytes_mut(&mut data)?;
 
-        if let Some(new_total) = managed_proof.total_delegated.checked_add(balance_diff) {
+        if let Some(new_total) = managed_proof.total_delegated.checked_add(miners_delegated_rewards) {
             managed_proof.total_delegated = new_total;
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
     }
 
-    // Update the Miners DelegatedStake amount
-    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
-        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
-
-        if let Some(new_total) = delegated_stake.amount.checked_add(balance_diff) {
-            delegated_stake.amount = new_total;
-        } else {
-            return Err(ProgramError::ArithmeticOverflow);
-        }
-    }
 
     Ok(())
 }

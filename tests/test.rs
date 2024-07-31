@@ -31,7 +31,8 @@ async fn test_register_proof() {
 
     // TODO: move transfer into register_proof program ix
     let ix0 = system_instruction::transfer(&payer.pubkey(), &managed_proof_authority.0, 100000000);
-    let ix = ore_miner_delegation::instruction::register_proof(payer.pubkey());
+    let commission: u8 = 10;
+    let ix = ore_miner_delegation::instruction::open_managed_proof(payer.pubkey(), commission);
 
     let mut tx = Transaction::new_with_payer(&[ix0, ix], Some(&payer.pubkey()));
 
@@ -94,6 +95,10 @@ async fn test_register_proof() {
         "ManagedProof account created with invalid bump"
     );
     assert_eq!(
+        managed_proof.commission, 10,
+        "Managed proof should have set 10 commision rate"
+    );
+    assert_eq!(
         0, managed_proof.total_delegated,
         "ManagedProof account created with invalid total delegated amount"
     );
@@ -122,7 +127,8 @@ pub async fn test_init_delegate_stake_account() {
         &managed_proof_authority.0,
         100000000,
     );
-    let ix = ore_miner_delegation::instruction::register_proof(context.payer.pubkey());
+
+    let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey(), 10);
 
     let mut tx = Transaction::new_with_payer(&[ix0, ix], Some(&context.payer.pubkey()));
 
@@ -213,7 +219,7 @@ pub async fn test_mine() {
         &managed_proof_authority.0,
         100000000,
     );
-    let ix = ore_miner_delegation::instruction::register_proof(context.payer.pubkey());
+    let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey(), 10);
 
     let ix_delegate_stake =
         ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());

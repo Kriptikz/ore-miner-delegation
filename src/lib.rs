@@ -1,12 +1,9 @@
 use instruction::Instructions;
-use processor::{process_mine, process_init_delegate_stake};
+use processor::{process_init_delegate_stake, process_mine, process_open_managed_proof};
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey,
 };
-
-use crate::processor::process_open_proof;
-
 
 pub mod instruction;
 pub mod processor;
@@ -37,8 +34,8 @@ pub fn process_instruction(
         Instructions::try_from(*instruction).or(Err(ProgramError::InvalidInstructionData))?;
 
     match instruction {
-        Instructions::RegisterProof => {
-            process_open_proof(accounts, data)?;
+        Instructions::OpenManagedProof => {
+            process_open_managed_proof(accounts, data)?;
         },
         Instructions::Mine => {
             process_mine(accounts, data)?;

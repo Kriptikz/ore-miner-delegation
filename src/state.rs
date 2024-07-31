@@ -12,7 +12,8 @@ use crate::{
 pub struct ManagedProof {
     pub bump: u8,
     pub authority_bump: u8,
-    _pad: [u8; 6],
+    pub commission: u8,
+    _pad: [u8; 5],
     pub miner_authority: Pubkey,
     pub total_delegated: u64,
 }
