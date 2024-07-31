@@ -19,7 +19,7 @@ spl-associated-token-account = { version = "3.0.2", features = ["no-entrypoint"]
 spl-token = { version = "=4.0.0", features = ["no-entrypoint"] }
 ore-api = { path = "../regolith-labs/ore/api" }
 ore-utils = { path = "../regolith-labs/ore/utils" }
-drillx = "2.0.0-beta.1"
+drillx = { path = "../regolith-labs/forks/drillx/drillx" }
 mpl-token-metadata = "4.1.2"
 
 [dev-dependencies]
