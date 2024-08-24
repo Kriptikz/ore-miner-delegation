@@ -1,11 +1,12 @@
 use std::{mem::size_of, ops::{Div, Mul}};
 
+use ore_api::loaders::{load_any_bus, load_config, load_proof_with_miner};
 use ore_utils::AccountDeserialize as _;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
-use crate::{instruction::{DelegateStakeArgs, MineArgs}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
+use crate::{instruction::{DelegateStakeArgs, MineArgs}, loaders::load_managed_proof, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
 pub fn process_open_managed_proof(
     accounts: &[AccountInfo],
@@ -215,25 +216,10 @@ pub fn process_mine(
     // Parse args
     let args = MineArgs::try_from_bytes(instruction_data)?;
 
-    if !managed_proof_account_info.is_writable {
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if managed_proof_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
-
-    if ore_bus_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
-
-    if ore_config_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
-
-    if ore_proof_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
+    load_managed_proof(managed_proof_account_info, fee_payer.key, true)?;
+    load_any_bus(ore_bus_account_info, true)?;
+    load_config(ore_config_account_info, false)?;
+    load_proof_with_miner(ore_proof_account_info, managed_proof_authority_info.key, true)?;
 
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
