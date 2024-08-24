@@ -9,6 +9,7 @@ pub mod instruction;
 pub mod processor;
 pub mod state;
 pub mod utils;
+pub mod loaders;
 
 // TODO: Update id with generated key
 declare_id!("SWK6MtQGZ4NJaijbHw2UPgtuSAo3NgZoM1dGgQw2x7n");
