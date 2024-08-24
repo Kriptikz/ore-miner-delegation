@@ -204,7 +204,6 @@ pub fn process_mine(
         delegated_stake_account_info,
         slothashes_sysvar,
         instructions_sysvar,
-        rent_sysvar,
         ore_program,
         system_program,
     ] =

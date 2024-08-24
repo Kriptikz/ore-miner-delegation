@@ -114,7 +114,6 @@ pub fn mine(payer: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
             AccountMeta::new(delegated_stake_account.0, false),
             AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
             AccountMeta::new_readonly(sysvar::instructions::id(), false),
-            AccountMeta::new_readonly(sysvar::rent::id(), false),
             AccountMeta::new_readonly(ore_api::id(), false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
