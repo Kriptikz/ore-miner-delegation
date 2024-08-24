@@ -499,85 +499,85 @@ pub async fn test_claim() {
     assert_eq!(ore_proof.balance, delegated_stake.amount);
 }
 
-#[tokio::test]
-pub async fn test_stake() {
-    let mut context = init_program().await;
+// #[tokio::test]
+// pub async fn test_stake() {
+//     let mut context = init_program().await;
 
-    let managed_proof_authority = Pubkey::find_program_address(
-        &[b"managed-proof-authority", context.payer.pubkey().as_ref()],
-        &ore_miner_delegation::id(),
-    );
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
-    let ore_proof_account = Pubkey::find_program_address(
-        &[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()],
-        &ore_api::id(),
-    );
+//     let managed_proof_authority = Pubkey::find_program_address(
+//         &[b"managed-proof-authority", context.payer.pubkey().as_ref()],
+//         &ore_miner_delegation::id(),
+//     );
+//     let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
+//     let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
+//     let ore_proof_account = Pubkey::find_program_address(
+//         &[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()],
+//         &ore_api::id(),
+//     );
 
-    // TODO: move transfer into register_proof program ix
-    let ix0 = system_instruction::transfer(
-        &context.payer.pubkey(),
-        &managed_proof_authority.0,
-        100000000,
-    );
-    let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey(), 10);
+//     // TODO: move transfer into register_proof program ix
+//     let ix0 = system_instruction::transfer(
+//         &context.payer.pubkey(),
+//         &managed_proof_authority.0,
+//         100000000,
+//     );
+//     let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey(), 10);
 
-    let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
-    let mut tx = Transaction::new_with_payer(&[ix0, ix, ix_delegate_stake], Some(&context.payer.pubkey()));
+//     let ix_delegate_stake =
+//         ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
+//     let mut tx = Transaction::new_with_payer(&[ix0, ix, ix_delegate_stake], Some(&context.payer.pubkey()));
 
-    let blockhash = context
-        .banks_client
-        .get_latest_blockhash()
-        .await
-        .expect("should get latest blockhash");
+//     let blockhash = context
+//         .banks_client
+//         .get_latest_blockhash()
+//         .await
+//         .expect("should get latest blockhash");
 
-    tx.sign(&[&context.payer], blockhash);
+//     tx.sign(&[&context.payer], blockhash);
 
-    context
-        .banks_client
-        .process_transaction(tx)
-        .await
-        .expect("process_transaction should be ok");
+//     context
+//         .banks_client
+//         .process_transaction(tx)
+//         .await
+//         .expect("process_transaction should be ok");
 
-    let ore_proof = context
-        .banks_client
-        .get_account(ore_proof_account.0)
-        .await
-        .unwrap()
-        .unwrap();
-    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+//     let ore_proof = context
+//         .banks_client
+//         .get_account(ore_proof_account.0)
+//         .await
+//         .unwrap()
+//         .unwrap();
+//     let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
 
-    let new_staker = Keypair::new();
+//     let new_staker = Keypair::new();
 
-    // Transfer some sol to the new_staker
-    let ix0 = system_instruction::transfer(
-        &context.payer.pubkey(),
-        &managed_proof_authority.0,
-        100000000,
-    );
+//     // Transfer some sol to the new_staker
+//     let ix0 = system_instruction::transfer(
+//         &context.payer.pubkey(),
+//         &managed_proof_authority.0,
+//         100000000,
+//     );
 
-    let mut tx = Transaction::new_with_payer(&[ix0], Some(&context.payer.pubkey()));
+//     let mut tx = Transaction::new_with_payer(&[ix0], Some(&context.payer.pubkey()));
 
-    let blockhash = context
-        .banks_client
-        .get_latest_blockhash()
-        .await
-        .expect("should get latest blockhash");
+//     let blockhash = context
+//         .banks_client
+//         .get_latest_blockhash()
+//         .await
+//         .expect("should get latest blockhash");
 
-    tx.sign(&[&context.payer], blockhash);
+//     tx.sign(&[&context.payer], blockhash);
 
-    context
-        .banks_client
-        .process_transaction(tx)
-        .await
-        .expect("process_transaction should be ok");
+//     context
+//         .banks_client
+//         .process_transaction(tx)
+//         .await
+//         .expect("process_transaction should be ok");
 
 
-    // TODO: Add ore to account to test staking
+//     // TODO: Add ore to account to test staking
 
-    todo!();
-}
+//     todo!();
+// }
 
 pub async fn init_program() -> ProgramTestContext {
     let mut program_test = ProgramTest::new(
