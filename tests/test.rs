@@ -7,6 +7,7 @@ use solana_program_test::{processor, read_file, ProgramTest, ProgramTestContext}
 use solana_sdk::{
     account::Account, compute_budget::ComputeBudgetInstruction, signature::Keypair, signer::Signer, transaction::Transaction
 };
+use spl_associated_token_account::instruction::create_associated_token_account;
 
 #[tokio::test]
 async fn test_register_proof() {
@@ -324,6 +325,181 @@ pub async fn test_mine() {
 }
 
 #[tokio::test]
+pub async fn test_claim() {
+    let mut context = init_program().await;
+
+    let managed_proof_authority = Pubkey::find_program_address(
+        &[b"managed-proof-authority", context.payer.pubkey().as_ref()],
+        &ore_miner_delegation::id(),
+    );
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
+    let ore_proof_account = Pubkey::find_program_address(
+        &[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()],
+        &ore_api::id(),
+    );
+
+    // TODO: move transfer into register_proof program ix
+    let ix0 = system_instruction::transfer(
+        &context.payer.pubkey(),
+        &managed_proof_authority.0,
+        100000000,
+    );
+    let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey(), 10);
+
+    let ix_delegate_stake =
+        ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
+    let mut tx = Transaction::new_with_payer(&[ix0, ix, ix_delegate_stake], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+    // Verify ore::Proof data
+    let ore_proof = context
+        .banks_client
+        .get_account(ore_proof_account.0)
+        .await
+        .unwrap()
+        .unwrap();
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+
+    let proof = ore_proof.clone();
+
+    let mut memory = equix::SolverMemory::new();
+
+    let mut nonce: u64 = 0;
+    let hash;
+
+    loop {
+        // Create hash
+        if let Ok(hx) =
+            drillx::hash_with_memory(&mut memory, &proof.challenge, &nonce.to_le_bytes())
+        {
+            let new_difficulty = hx.difficulty();
+            if new_difficulty.gt(&ore_api::consts::INITIAL_MIN_DIFFICULTY) {
+                hash = hx;
+                nonce = nonce;
+
+                break;
+            }
+        }
+
+        // Increment nonce
+        nonce += 1;
+    }
+
+    // Update clock to be 60 seconds after proof
+    let new_clock = solana_program::clock::Clock {
+        slot: 0,
+        epoch_start_timestamp: proof.last_hash_at + 60,
+        epoch: 140,
+        leader_schedule_epoch: 141,
+        unix_timestamp: proof.last_hash_at + 60,
+    };
+
+    context.set_sysvar::<Clock>(&new_clock);
+
+    // Submit solution
+    let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
+
+
+    let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
+    let ix0 = ore_api::instruction::reset(context.payer.pubkey());
+    
+    // Set ix1 to be the proof declaration authentication
+    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+
+    let ix =
+        ore_miner_delegation::instruction::mine(context.payer.pubkey(), BUS_ADDRESSES[0], solution);
+
+    let mut tx =
+        Transaction::new_with_payer(&[cu_limit_ix, proof_declaration, ix0, ix], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+    // Verify proof account balance is updated
+    let ore_proof = context
+        .banks_client
+        .get_account(ore_proof_account.0)
+        .await
+        .unwrap()
+        .unwrap();
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+    assert!(ore_proof.balance > 0);
+
+    // Verify miner's delegate stake account amount
+    let delegated_stake = context.banks_client.get_account(delegated_stake_account.0).await.unwrap().unwrap();
+    let delegated_stake =
+        ore_miner_delegation::state::DelegatedStake::try_from_bytes(&delegated_stake.data).unwrap();
+
+    assert!(delegated_stake.amount > 0);
+    assert_eq!(ore_proof.balance, delegated_stake.amount);
+
+    // create miners ata
+    let ix_0 = create_associated_token_account(&context.payer.pubkey(), &context.payer.pubkey(), &ore_api::consts::MINT_ADDRESS, &spl_token::id());
+
+    // Claim from the delegated balance
+    let ix =
+        ore_miner_delegation::instruction::claim(context.payer.pubkey(), ore_proof.balance);
+
+    let mut tx =
+        Transaction::new_with_payer(&[ix_0, ix], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+    let ore_proof = context
+        .banks_client
+        .get_account(ore_proof_account.0)
+        .await
+        .unwrap()
+        .unwrap();
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+    assert_eq!(ore_proof.balance, 0);
+
+    // Verify miner's delegate stake account amount
+    let delegated_stake = context.banks_client.get_account(delegated_stake_account.0).await.unwrap().unwrap();
+    let delegated_stake =
+        ore_miner_delegation::state::DelegatedStake::try_from_bytes(&delegated_stake.data).unwrap();
+
+    assert_eq!(ore_proof.balance, delegated_stake.amount);
+}
+
+#[tokio::test]
 pub async fn test_stake() {
     let mut context = init_program().await;
 
@@ -400,6 +576,7 @@ pub async fn test_stake() {
 
     // TODO: Add ore to account to test staking
 
+    todo!();
 }
 
 pub async fn init_program() -> ProgramTestContext {

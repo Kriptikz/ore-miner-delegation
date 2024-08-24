@@ -14,7 +14,9 @@ pub enum Instructions {
     OpenManagedProof,
     InitDelegateStake,
     Mine,
+    Claim,
     DelegateStake,
+    UndelegateStake,
 }
 
 impl Into<Vec<u8>> for Instructions {
@@ -150,6 +152,58 @@ pub fn mine(payer: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct ClaimArgs {
+    pub amount: [u8; 8],
+}
+
+impl_to_bytes!(ClaimArgs);
+impl_instruction_from_bytes!(ClaimArgs);
+
+pub fn claim(payer: Pubkey, amount: u64) -> Instruction {
+    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", payer.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", payer.as_ref()], &crate::id());
+
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+
+    let beneficiary_tokens = spl_associated_token_account::get_associated_token_address(
+        &payer,
+        &ore_api::consts::MINT_ADDRESS,
+    );
+
+    let treasury_tokens = spl_associated_token_account::get_associated_token_address(
+        &ore_api::consts::TREASURY_ADDRESS,
+        &ore_api::consts::MINT_ADDRESS,
+    );
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(managed_proof_authority.0, false),
+            AccountMeta::new(managed_proof_account.0, false),
+            AccountMeta::new(beneficiary_tokens, false),
+            AccountMeta::new(ore_proof_account.0, false),
+            AccountMeta::new(delegated_stake_account.0, false),
+            AccountMeta::new_readonly(ore_api::consts::TREASURY_ADDRESS, false),
+            AccountMeta::new(treasury_tokens, false),
+            AccountMeta::new_readonly(ore_api::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: [
+            Instructions::Claim.to_vec(),
+            ClaimArgs {
+                amount: amount.to_le_bytes(),
+            }
+            .to_bytes()
+            .to_vec(),
+        ]
+        .concat(),
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct DelegateStakeArgs {
     pub amount: u64,
 }
@@ -185,6 +239,52 @@ pub fn delegate_stake(payer: Pubkey, miner: Pubkey, amount: u64) -> Instruction 
         data: [
             Instructions::DelegateStake.to_vec(),
             DelegateStakeArgs {
+                amount,
+            }
+            .to_bytes()
+            .to_vec(),
+        ]
+        .concat(),
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct UndelegateStakeArgs {
+    pub amount: u64,
+}
+
+impl_to_bytes!(UndelegateStakeArgs);
+impl_instruction_from_bytes!(UndelegateStakeArgs);
+
+pub fn undelegate_stake(payer: Pubkey, miner: Pubkey, amount: u64) -> Instruction {
+    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
+
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+
+    let treasury_tokens = spl_associated_token_account::get_associated_token_address(
+        &ore_api::consts::TREASURY_ADDRESS,
+        &ore_api::consts::MINT_ADDRESS,
+    );
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(managed_proof_authority.0, false),
+            AccountMeta::new(managed_proof_account.0, false),
+            AccountMeta::new_readonly(ore_api::consts::CONFIG_ADDRESS, false),
+            AccountMeta::new(ore_proof_account.0, false),
+            AccountMeta::new(delegated_stake_account.0, false),
+            AccountMeta::new(treasury_tokens, false),
+            AccountMeta::new_readonly(ore_api::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: [
+            Instructions::UndelegateStake.to_vec(),
+            UndelegateStakeArgs {
                 amount,
             }
             .to_bytes()

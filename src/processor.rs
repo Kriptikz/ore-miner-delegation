@@ -395,3 +395,184 @@ pub fn process_delegate_stake(
     }
     Ok(())
 }
+
+pub fn process_claim(
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> Result<(), ProgramError> {
+    let [
+        fee_payer,
+        managed_proof_authority_info,
+        managed_proof_account_info,
+        beneficiary_token_account,
+        ore_proof_account_info,
+        delegated_stake_account_info,
+        treasury_address,
+        treasury_tokens,
+        ore_program,
+        token_program,
+    ] =
+        accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    // TODO: verify this is the miners delegated stake account
+
+    // Parse args
+    let args = crate::instruction::ClaimArgs::try_from_bytes(instruction_data)?;
+    let amount = u64::from_le_bytes(args.amount);
+
+    // if managed_proof_account_info.data_is_empty() {
+    //     return Err(ProgramError::UninitializedAccount);
+    // }
+
+    if ore_proof_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if delegated_stake_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if treasury_tokens.data_is_empty() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if *ore_program.key != ore_api::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if *token_program.key != spl_token::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    // Need to use find_program_address here because I need the pda's bump.
+    // Should store this in the managed_proof_account data.
+    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", fee_payer.key.as_ref()], &crate::id());
+    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", fee_payer.key.as_ref()], &crate::id());
+    if managed_proof_account_pda.0 != *managed_proof_account_info.key {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    solana_program::program::invoke_signed(
+        &ore_api::instruction::claim(managed_proof_authority_pda.0, *beneficiary_token_account.key, amount),
+        &[
+            managed_proof_authority_info.clone(),
+            beneficiary_token_account.clone(),
+            ore_proof_account_info.clone(),
+            treasury_address.clone(),
+            treasury_tokens.clone(),
+            ore_program.clone(),
+        ],
+        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+    )?;
+
+    // decrease delegate stake balance
+    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
+        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
+
+        if let Some(new_total) = delegated_stake.amount.checked_sub(amount) {
+            delegated_stake.amount = new_total;
+        } else {
+            return Err(ProgramError::ArithmeticOverflow);
+        }
+    }
+    Ok(())
+}
+
+pub fn process_undelegate_stake(
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> Result<(), ProgramError> {
+    let [
+        fee_payer,
+        miner_authority_info,
+        managed_proof_authority_info,
+        managed_proof_account_info,
+        ore_config_account_info,
+        ore_proof_account_info,
+        delegated_stake_account_info,
+        treasury,
+        ore_program,
+        token_program,
+    ] =
+        accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    // Parse args
+    let args = DelegateStakeArgs::try_from_bytes(instruction_data)?;
+
+    if !managed_proof_account_info.is_writable {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if managed_proof_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if ore_config_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if ore_proof_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if delegated_stake_account_info.data_is_empty() {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if treasury.data_is_empty() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if *ore_program.key != ore_api::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if *token_program.key != spl_token::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    // Need to use find_program_address here because I need the pda's bump.
+    // Should store this in the managed_proof_account data.
+    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", miner_authority_info.key.as_ref()], &crate::id());
+    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", miner_authority_info.key.as_ref()], &crate::id());
+    if managed_proof_account_pda.0 != *managed_proof_account_info.key {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let proof_balance = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
+        let ore_proof = ore_api::state::Proof::try_from_bytes(&data)?;
+        ore_proof.balance
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
+    };
+
+    solana_program::program::invoke_signed(
+        &ore_api::instruction::claim(managed_proof_authority_pda.0, *fee_payer.key, args.amount),
+        &[
+            managed_proof_authority_info.clone(),
+            ore_proof_account_info.clone(),
+            fee_payer.clone(),
+            treasury.clone(),
+            ore_program.clone(),
+        ],
+        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+    )?;
+
+    // decrease delegate stake balance
+    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
+        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
+
+        if let Some(new_total) = delegated_stake.amount.checked_sub(args.amount) {
+            delegated_stake.amount = new_total;
+        } else {
+            return Err(ProgramError::ArithmeticOverflow);
+        }
+    }
+    Ok(())
+}
