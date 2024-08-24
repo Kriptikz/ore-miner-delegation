@@ -63,8 +63,6 @@ pub fn init_delegate_stake(
     payer: Pubkey,
     miner: Pubkey,
 ) -> Instruction {
-    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
     let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
 
     let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
@@ -74,14 +72,9 @@ pub fn init_delegate_stake(
         accounts: vec![
             AccountMeta::new(payer, true),
             AccountMeta::new(miner, false),
-            AccountMeta::new(managed_proof_authority.0, false),
             AccountMeta::new(managed_proof_account.0, false),
-            AccountMeta::new(ore_proof_account.0, false),
             AccountMeta::new(delegated_stake_account.0, false),
-            AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
-            AccountMeta::new_readonly(sysvar::instructions::id(), false),
             AccountMeta::new_readonly(sysvar::rent::id(), false),
-            AccountMeta::new_readonly(ore_api::id(), false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
         data: Instructions::InitDelegateStake.into(),

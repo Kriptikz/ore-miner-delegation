@@ -112,14 +112,9 @@ pub fn process_init_delegate_stake(
     let [
         fee_payer,
         miner,
-        managed_proof_authority_info,
         managed_proof_account_info,
-        ore_proof_account_info,
         delegate_stake_account_info,
-        slothashes_sysvar,
-        instructions_sysvar,
         rent_sysvar,
-        ore_program,
         system_program,
     ] =
         accounts
@@ -129,13 +124,7 @@ pub fn process_init_delegate_stake(
 
     msg!("Init Delegate Stake");
 
-    if !managed_proof_account_info.is_writable {
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if managed_proof_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
+    load_managed_proof(managed_proof_account_info, miner.key, false)?;
 
     if !delegate_stake_account_info.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized);
@@ -148,9 +137,6 @@ pub fn process_init_delegate_stake(
     if *system_program.key != system_program::id() {
         return Err(ProgramError::IncorrectProgramId);
     }
-
-    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", miner.key.as_ref()], &crate::id());
-    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", miner.key.as_ref()], &crate::id());
 
     let delegated_stake_pda = Pubkey::find_program_address(&[b"delegated-stake", fee_payer.key.as_ref(), managed_proof_account_info.key.as_ref()], &crate::id());
 
