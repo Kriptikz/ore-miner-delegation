@@ -98,9 +98,7 @@ pub fn process_open_managed_proof(
     
     parsed_data.bump = managed_proof_account_pda.1;
     parsed_data.authority_bump = managed_proof_authority_pda.1;
-    parsed_data.total_delegated = 0;
     parsed_data.miner_authority = *fee_payer.key;
-    parsed_data.commission = args.commission;
 
 
     Ok(())
@@ -282,62 +280,22 @@ pub fn process_mine(
         return Err(ProgramError::AccountBorrowFailed);
     };
 
-
-    let miners_delegated_rewards = if let Ok(data) = managed_proof_account_info.data.try_borrow() {
-        let managed_proof = crate::state::ManagedProof::try_from_bytes(&data)?;
-        // Calculate the miners rewards subtracting the stakers commission
-        let miner_rewards_earned = if let Some(difference) = balance_after.checked_sub(balance_before) {
-            difference - ((difference as f64).mul(managed_proof.commission as f64 / 100.0)) as u64
-        } else {
-            return Err(ProgramError::ArithmeticOverflow);
-        };
-
-        // Calculate the miners delegated_amount based on the delegated to actual balance ratio
-        if managed_proof.total_delegated == balance_before {
-            miner_rewards_earned
-        } else {
-            if let Some(amount) = (miner_rewards_earned as u128).checked_mul(managed_proof.total_delegated as u128) {
-                if let Some(amount) = amount.checked_div(balance_before as u128) {
-                    if let Ok(amount) = amount.try_into() {
-                        amount
-                    } else {
-                        return Err(ProgramError::ArithmeticOverflow);
-                    }
-                } else {
-                    return Err(ProgramError::ArithmeticOverflow);
-                }
-            } else {
-                return Err(ProgramError::ArithmeticOverflow);
-            }
-        }
+    let miner_rewards_earned = if let Some(difference) = balance_after.checked_sub(balance_before) {
+        difference
     } else {
-        return Err(ProgramError::AccountBorrowFailed);
+        return Err(ProgramError::ArithmeticOverflow);
     };
-
 
     // Update the Miners DelegatedStake amount
     if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
         let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
 
-        if let Some(new_total) = delegated_stake.amount.checked_add(miners_delegated_rewards) {
+        if let Some(new_total) = delegated_stake.amount.checked_add(miner_rewards_earned) {
             delegated_stake.amount = new_total;
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
     }
-
-
-    // Update the ManagedProof total delegated
-    if let Ok(mut data) = managed_proof_account_info.data.try_borrow_mut() {
-        let managed_proof = crate::state::ManagedProof::try_from_bytes_mut(&mut data)?;
-
-        if let Some(new_total) = managed_proof.total_delegated.checked_add(miners_delegated_rewards) {
-            managed_proof.total_delegated = new_total;
-        } else {
-            return Err(ProgramError::ArithmeticOverflow);
-        }
-    }
-
 
     Ok(())
 }
@@ -425,44 +383,15 @@ pub fn process_delegate_stake(
         &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
     )?;
 
-    if let Ok(mut data) = managed_proof_account_info.data.try_borrow_mut() {
-        let managed_proof = crate::state::ManagedProof::try_from_bytes_mut(&mut data)?;
+    // increase delegate stake balance
+    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
+        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
 
-        let delegated_amount = if managed_proof.total_delegated == proof_balance {
-            args.amount
-        } else {
-            if let Some(amount) = (args.amount as u128).checked_mul(managed_proof.total_delegated as u128) {
-                if let Some(amount) = amount.checked_div(proof_balance as u128) {
-                    if let Ok(amount) = amount.try_into() {
-                        amount
-                    } else {
-                        return Err(ProgramError::ArithmeticOverflow);
-                    }
-                } else {
-                    return Err(ProgramError::ArithmeticOverflow);
-                }
-            } else {
-                return Err(ProgramError::ArithmeticOverflow);
-            }
-        };
-
-
-        if let Some(new_total) = managed_proof.total_delegated.checked_add(delegated_amount) {
-            managed_proof.total_delegated = new_total;
-            if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
-                let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
-
-                if let Some(new_total) = delegated_stake.amount.checked_add(delegated_amount) {
-                    delegated_stake.amount = new_total;
-                } else {
-                    return Err(ProgramError::ArithmeticOverflow);
-                }
-            }
+        if let Some(new_total) = delegated_stake.amount.checked_add(args.amount) {
+            delegated_stake.amount = new_total;
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
-    } else {
-        return Err(ProgramError::AccountBorrowFailed);
     }
     Ok(())
 }

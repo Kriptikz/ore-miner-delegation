@@ -94,14 +94,6 @@ async fn test_register_proof() {
         "ManagedProof account created with invalid bump"
     );
     assert_eq!(
-        managed_proof.commission, 10,
-        "Managed proof should have set 10 commision rate"
-    );
-    assert_eq!(
-        0, managed_proof.total_delegated,
-        "ManagedProof account created with invalid total delegated amount"
-    );
-    assert_eq!(
         payer.pubkey(),
         managed_proof.miner_authority,
         "ManagedProof account created with wrong miner authority"
@@ -322,16 +314,6 @@ pub async fn test_mine() {
         .unwrap();
     let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
     assert!(ore_proof.balance > 0);
-
-    // Verify managed proof account total_delegated
-    let managed_proof = context
-        .banks_client
-        .get_account(managed_proof_account.0)
-        .await
-        .unwrap()
-        .unwrap();
-    let managed_proof = ore_miner_delegation::state::ManagedProof::try_from_bytes(&managed_proof.data).unwrap();
-    assert!(managed_proof.total_delegated > 0);
 
     // Verify miner's delegate stake account mount
     let delegated_stake = context.banks_client.get_account(delegated_stake_account.0).await.unwrap().unwrap();
