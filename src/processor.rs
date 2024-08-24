@@ -228,10 +228,6 @@ pub fn process_mine(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    // Need to use find_program_address here because I need the pda's bump.
-    // Should store this in the managed_proof_account data.
-    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", fee_payer.key.as_ref()], &crate::id());
-    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", fee_payer.key.as_ref()], &crate::id());
 
     let balance_before = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
         let ore_proof = ore_api::state::Proof::try_from_bytes(&data)?;
@@ -240,11 +236,14 @@ pub fn process_mine(
         return Err(ProgramError::AccountBorrowFailed);
     };
 
+    let managed_proof_data = managed_proof_account_info.data.borrow();
+    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
+
     // CPI to submit the solution
     //
     let solution = drillx::Solution::new(args.digest, args.nonce);
     solana_program::program::invoke_signed(
-        &ore_api::instruction::mine(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *ore_bus_account_info.key, solution),
+        &ore_api::instruction::mine(*managed_proof_authority_info.key, *managed_proof_authority_info.key, *ore_bus_account_info.key, solution),
         &[
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
@@ -255,7 +254,7 @@ pub fn process_mine(
             ore_program.clone(),
             system_program.clone(),
         ],
-        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof.authority_bump]]],
     )?;
 
     let balance_after = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
