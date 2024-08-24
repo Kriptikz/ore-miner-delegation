@@ -35,19 +35,8 @@ impl_to_bytes!(MineArgs);
 impl_instruction_from_bytes!(MineArgs);
 
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Pod, Zeroable)]
-pub struct OpenManagedProofArgs {
-    pub commission: u8,
-}
-
-impl_to_bytes!(OpenManagedProofArgs);
-impl_instruction_from_bytes!(OpenManagedProofArgs);
-
-
 pub fn open_managed_proof(
     payer: Pubkey,
-    commission: u8,
 ) -> Instruction {
 
     let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", payer.as_ref()], &crate::id());
@@ -66,15 +55,7 @@ pub fn open_managed_proof(
             AccountMeta::new_readonly(ore_api::id(), false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
-        data: [
-            Instructions::OpenManagedProof.to_vec(),
-            OpenManagedProofArgs {
-                commission,
-            }
-            .to_bytes()
-            .to_vec(),
-        ]
-        .concat(),
+        data: Instructions::OpenManagedProof.to_vec(),
     }
 }
 

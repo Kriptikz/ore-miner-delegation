@@ -5,14 +5,14 @@ use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
-use crate::{instruction::{DelegateStakeArgs, MineArgs, OpenManagedProofArgs}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
+use crate::{instruction::{DelegateStakeArgs, MineArgs}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
 pub fn process_open_managed_proof(
     accounts: &[AccountInfo],
-    instruction_data: &[u8],
+    _instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
     let [
-        fee_payer,
+        miner,
         managed_proof_authority_info,
         managed_proof_account_info,
         ore_proof_account_info,
@@ -26,9 +26,9 @@ pub fn process_open_managed_proof(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    msg!("Open Proof Account");
-    // Parse args
-    let args = OpenManagedProofArgs::try_from_bytes(instruction_data)?;
+    if !miner.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
 
     if !managed_proof_account_info.is_writable {
         return Err(ProgramError::InvalidAccountData);
@@ -46,23 +46,23 @@ pub fn process_open_managed_proof(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", fee_payer.key.as_ref()], &crate::id());
-    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", fee_payer.key.as_ref()], &crate::id());
+    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", miner.key.as_ref()], &crate::id());
+    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", miner.key.as_ref()], &crate::id());
 
 
     // CPI to create the proof account
     solana_program::program::invoke_signed(
-        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *fee_payer.key),
+        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *miner.key),
         &[
             managed_proof_authority_info.clone(),
-            fee_payer.clone(),
+            miner.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
             rent_sysvar.clone(),
             ore_program.clone(),
             system_program.clone(),
         ],
-        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof_authority_pda.1]]],
     )?;
 
     // Set the ManangedProof account data
@@ -74,7 +74,7 @@ pub fn process_open_managed_proof(
 
     solana_program::program::invoke_signed(
         &solana_program::system_instruction::create_account(
-            fee_payer.key,
+            miner.key,
             managed_proof_account_info.key,
             cost,
             space
@@ -83,11 +83,11 @@ pub fn process_open_managed_proof(
             &crate::id(),
         ),
         &[
-            fee_payer.clone(),
+            miner.clone(),
             managed_proof_account_info.clone(),
             system_program.clone(),
         ],
-        &[&[b"managed-proof-account", fee_payer.key.as_ref(), &[managed_proof_account_pda.1]]],
+        &[&[b"managed-proof-account", miner.key.as_ref(), &[managed_proof_account_pda.1]]],
     )?;
 
     let mut data = managed_proof_account_info.data.borrow_mut();
@@ -98,7 +98,7 @@ pub fn process_open_managed_proof(
     
     parsed_data.bump = managed_proof_account_pda.1;
     parsed_data.authority_bump = managed_proof_authority_pda.1;
-    parsed_data.miner_authority = *fee_payer.key;
+    parsed_data.miner_authority = *miner.key;
 
 
     Ok(())
