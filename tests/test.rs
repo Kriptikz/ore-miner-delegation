@@ -338,17 +338,11 @@ pub async fn test_claim() {
         &ore_api::id(),
     );
 
-    // TODO: move transfer into register_proof program ix
-    let ix0 = system_instruction::transfer(
-        &context.payer.pubkey(),
-        &managed_proof_authority.0,
-        100000000,
-    );
     let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
 
     let ix_delegate_stake =
         ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
-    let mut tx = Transaction::new_with_payer(&[ix0, ix, ix_delegate_stake], Some(&context.payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&context.payer.pubkey()));
 
     let blockhash = context
         .banks_client
