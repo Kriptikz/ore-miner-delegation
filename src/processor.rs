@@ -1,12 +1,12 @@
 use std::{mem::size_of, ops::{Div, Mul}};
 
-use ore_api::loaders::{load_any_bus, load_config, load_proof_with_miner};
-use ore_utils::AccountDeserialize as _;
+use ore_api::loaders::{load_any_bus, load_config, load_proof_with_miner, load_treasury};
+use ore_utils::{spl::transfer, AccountDeserialize as _};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
-use crate::{instruction::{DelegateStakeArgs, MineArgs}, loaders::load_managed_proof, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
+use crate::{instruction::{DelegateStakeArgs, MineArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
 pub fn process_open_managed_proof(
     accounts: &[AccountInfo],
@@ -53,10 +53,9 @@ pub fn process_open_managed_proof(
 
     // CPI to create the proof account
     solana_program::program::invoke_signed(
-        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *miner.key),
+        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *managed_proof_authority_info.key),
         &[
             managed_proof_authority_info.clone(),
-            miner.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
             rent_sysvar.clone(),
@@ -121,8 +120,6 @@ pub fn process_init_delegate_stake(
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
-
-    msg!("Init Delegate Stake");
 
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
 
@@ -275,14 +272,17 @@ pub fn process_delegate_stake(
     instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
     let [
-        fee_payer,
-        miner_authority_info,
+        staker,
+        miner,
         managed_proof_authority_info,
         managed_proof_account_info,
         ore_config_account_info,
         ore_proof_account_info,
+        managed_proof_authority_token_account_info,
+        staker_token_account_info,
         delegated_stake_account_info,
         treasury,
+        treasury_tokens,
         ore_program,
         token_program,
     ] =
@@ -293,30 +293,19 @@ pub fn process_delegate_stake(
 
     // Parse args
     let args = DelegateStakeArgs::try_from_bytes(instruction_data)?;
+    let amount = u64::from_le_bytes(args.amount);
 
-    if !managed_proof_account_info.is_writable {
-        return Err(ProgramError::InvalidAccountData);
+    if !staker.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
     }
 
-    if managed_proof_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
 
-    if ore_config_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
-
-    if ore_proof_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
-
-    if delegated_stake_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
-
-    if treasury.data_is_empty() {
-        return Err(ProgramError::IncorrectProgramId);
-    }
+    load_managed_proof(managed_proof_account_info, miner.key, false)?;
+    load_config(ore_config_account_info, false)?;
+    load_treasury(treasury, true)?;
+    msg!("Loading delegated stake account");
+    load_delegated_stake(delegated_stake_account_info, staker.key, &managed_proof_account_info.key, true)?;
+    msg!("Loaded delegated stake account");
 
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
@@ -326,38 +315,48 @@ pub fn process_delegate_stake(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    // Need to use find_program_address here because I need the pda's bump.
-    // Should store this in the managed_proof_account data.
-    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", miner_authority_info.key.as_ref()], &crate::id());
-    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", miner_authority_info.key.as_ref()], &crate::id());
-    if managed_proof_account_pda.0 != *managed_proof_account_info.key {
-        return Err(ProgramError::InvalidAccountData);
+    let managed_proof_data = managed_proof_account_info.data.borrow();
+    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
+
+    // transfer to miners token account
+    msg!("Transfering to managed proof authority for stake...");
+    if staker_token_account_info.data_is_empty() {
+        msg!("staker token account info data is empty!");
     }
+    if managed_proof_authority_token_account_info.data_is_empty() {
+        msg!("managed proof authority token account info data is empty!");
+    }
+    transfer(
+        staker,
+        staker_token_account_info,
+        managed_proof_authority_token_account_info,
+        token_program,
+        amount,
+    )?;
+    msg!("Transferred!");
 
-    let proof_balance = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
-        let ore_proof = ore_api::state::Proof::try_from_bytes(&data)?;
-        ore_proof.balance
-    } else {
-        return Err(ProgramError::AccountBorrowFailed);
-    };
-
+    // stake to ore program
+    msg!("STAKING...");
     solana_program::program::invoke_signed(
-        &ore_api::instruction::stake(managed_proof_authority_pda.0, *fee_payer.key, args.amount),
+        &ore_api::instruction::stake(*managed_proof_authority_info.key, *managed_proof_authority_token_account_info.key, amount),
         &[
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
-            fee_payer.clone(),
+            managed_proof_authority_token_account_info.clone(),
             treasury.clone(),
+            treasury_tokens.clone(),
             ore_program.clone(),
+            token_program.clone(),
         ],
-        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
     )?;
+    msg!("Staked!");
 
     // increase delegate stake balance
     if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
         let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
 
-        if let Some(new_total) = delegated_stake.amount.checked_add(args.amount) {
+        if let Some(new_total) = delegated_stake.amount.checked_add(amount) {
             delegated_stake.amount = new_total;
         } else {
             return Err(ProgramError::ArithmeticOverflow);
@@ -474,6 +473,7 @@ pub fn process_undelegate_stake(
 
     // Parse args
     let args = DelegateStakeArgs::try_from_bytes(instruction_data)?;
+    let amount = u64::from_le_bytes(args.amount);
 
     if !managed_proof_account_info.is_writable {
         return Err(ProgramError::InvalidAccountData);
@@ -522,8 +522,12 @@ pub fn process_undelegate_stake(
         return Err(ProgramError::AccountBorrowFailed);
     };
 
+    if amount > proof_balance {
+        return Err(ProgramError::Custom(0));
+    }
+
     solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(managed_proof_authority_pda.0, *fee_payer.key, args.amount),
+        &ore_api::instruction::claim(managed_proof_authority_pda.0, *fee_payer.key, amount),
         &[
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
@@ -538,7 +542,7 @@ pub fn process_undelegate_stake(
     if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
         let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
 
-        if let Some(new_total) = delegated_stake.amount.checked_sub(args.amount) {
+        if let Some(new_total) = delegated_stake.amount.checked_sub(amount) {
             delegated_stake.amount = new_total;
         } else {
             return Err(ProgramError::ArithmeticOverflow);
