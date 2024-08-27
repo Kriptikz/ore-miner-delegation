@@ -357,7 +357,7 @@ pub fn process_claim(
     instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
     let [
-        fee_payer,
+        miner,
         managed_proof_authority_info,
         managed_proof_account_info,
         beneficiary_token_account,
@@ -373,23 +373,16 @@ pub fn process_claim(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    // TODO: verify this is the miners delegated stake account
-
     // Parse args
     let args = crate::instruction::ClaimArgs::try_from_bytes(instruction_data)?;
     let amount = u64::from_le_bytes(args.amount);
 
-    // if managed_proof_account_info.data_is_empty() {
-    //     return Err(ProgramError::UninitializedAccount);
-    // }
-
-    if ore_proof_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
+    if !miner.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
     }
-
-    if delegated_stake_account_info.data_is_empty() {
-        return Err(ProgramError::UninitializedAccount);
-    }
+    load_managed_proof(managed_proof_account_info, miner.key, false)?;
+    load_proof_with_miner(ore_proof_account_info, miner.key, true)?;
+    load_delegated_stake(delegated_stake_account_info, miner.key, managed_proof_account_info.key, true)?;
 
     if treasury_tokens.data_is_empty() {
         return Err(ProgramError::IncorrectProgramId);
