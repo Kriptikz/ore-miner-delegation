@@ -1,13 +1,14 @@
-use bytemuck::{Zeroable, Pod};
+use bytemuck::{Pod, Zeroable};
 use drillx::Solution;
 use num_enum::TryFromPrimitive;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
-    pubkey::Pubkey, system_program, sysvar,
+    pubkey::Pubkey,
+    system_program, sysvar,
 };
 use spl_associated_token_account::get_associated_token_address;
 
-use crate::{impl_to_bytes, impl_instruction_from_bytes};
+use crate::{impl_instruction_from_bytes, impl_to_bytes};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
@@ -34,13 +35,13 @@ impl Instructions {
 impl_to_bytes!(MineArgs);
 impl_instruction_from_bytes!(MineArgs);
 
-
-pub fn open_managed_proof(
-    miner: Pubkey,
-) -> Instruction {
-
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_account.0.as_ref()], &ore_api::id());
+pub fn open_managed_proof(miner: Pubkey) -> Instruction {
+    let managed_proof_account =
+        Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(
+        &[ore_api::consts::PROOF, managed_proof_account.0.as_ref()],
+        &ore_api::id(),
+    );
 
     Instruction {
         program_id: crate::id(),
@@ -57,12 +58,17 @@ pub fn open_managed_proof(
     }
 }
 
-pub fn init_delegate_stake(
-    payer: Pubkey,
-    miner: Pubkey,
-) -> Instruction {
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+pub fn init_delegate_stake(payer: Pubkey, miner: Pubkey) -> Instruction {
+    let managed_proof_account =
+        Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
+    let delegated_stake_account = Pubkey::find_program_address(
+        &[
+            b"delegated-stake",
+            payer.as_ref(),
+            managed_proof_account.0.as_ref(),
+        ],
+        &crate::id(),
+    );
 
     Instruction {
         program_id: crate::id(),
@@ -86,10 +92,21 @@ pub struct MineArgs {
 }
 
 pub fn mine(payer: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", payer.as_ref()], &crate::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_account.0.as_ref()], &ore_api::id());
+    let managed_proof_account =
+        Pubkey::find_program_address(&[b"managed-proof-account", payer.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(
+        &[ore_api::consts::PROOF, managed_proof_account.0.as_ref()],
+        &ore_api::id(),
+    );
 
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+    let delegated_stake_account = Pubkey::find_program_address(
+        &[
+            b"delegated-stake",
+            payer.as_ref(),
+            managed_proof_account.0.as_ref(),
+        ],
+        &crate::id(),
+    );
 
     Instruction {
         program_id: crate::id(),
@@ -128,13 +145,26 @@ impl_to_bytes!(DelegateStakeArgs);
 impl_instruction_from_bytes!(DelegateStakeArgs);
 
 pub fn delegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instruction {
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_account.0.as_ref()], &ore_api::id());
+    let managed_proof_account =
+        Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(
+        &[ore_api::consts::PROOF, managed_proof_account.0.as_ref()],
+        &ore_api::id(),
+    );
 
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", staker.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+    let delegated_stake_account = Pubkey::find_program_address(
+        &[
+            b"delegated-stake",
+            staker.as_ref(),
+            managed_proof_account.0.as_ref(),
+        ],
+        &crate::id(),
+    );
 
-    let staker_token_account = get_associated_token_address(&staker, &ore_api::consts::MINT_ADDRESS);
-    let managed_proof_token_account = get_associated_token_address(&managed_proof_account.0, &ore_api::consts::MINT_ADDRESS);
+    let staker_token_account =
+        get_associated_token_address(&staker, &ore_api::consts::MINT_ADDRESS);
+    let managed_proof_token_account =
+        get_associated_token_address(&managed_proof_account.0, &ore_api::consts::MINT_ADDRESS);
 
     Instruction {
         program_id: crate::id(),
@@ -172,11 +202,27 @@ pub struct UndelegateStakeArgs {
 impl_to_bytes!(UndelegateStakeArgs);
 impl_instruction_from_bytes!(UndelegateStakeArgs);
 
-pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, beneficiary_token_account: Pubkey, amount: u64) -> Instruction {
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_account.0.as_ref()], &ore_api::id());
+pub fn undelegate_stake(
+    staker: Pubkey,
+    miner: Pubkey,
+    beneficiary_token_account: Pubkey,
+    amount: u64,
+) -> Instruction {
+    let managed_proof_account =
+        Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
+    let ore_proof_account = Pubkey::find_program_address(
+        &[ore_api::consts::PROOF, managed_proof_account.0.as_ref()],
+        &ore_api::id(),
+    );
 
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", staker.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
+    let delegated_stake_account = Pubkey::find_program_address(
+        &[
+            b"delegated-stake",
+            staker.as_ref(),
+            managed_proof_account.0.as_ref(),
+        ],
+        &crate::id(),
+    );
 
     Instruction {
         program_id: crate::id(),

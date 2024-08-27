@@ -72,11 +72,10 @@ macro_rules! impl_account_from_account_info {
 
                 if let Ok(account) = account_info.data.try_borrow() {
                     let parsed_data = $struct_name::try_from_bytes(&account)?;
-                    return Ok(parsed_data.clone())
+                    return Ok(parsed_data.clone());
                 } else {
                     return Err(ProgramError::AccountBorrowFailed);
                 };
-
             }
         }
     };

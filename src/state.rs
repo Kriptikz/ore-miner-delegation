@@ -2,8 +2,8 @@ use bytemuck::{Pod, Zeroable};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
-    impl_account_from_bytes, impl_to_bytes,
-    utils::{AccountDiscriminator, Discriminator, AccountDeserialize}, impl_account_from_account_info,
+    impl_account_from_account_info, impl_account_from_bytes, impl_to_bytes,
+    utils::{AccountDeserialize, AccountDiscriminator, Discriminator},
 };
 
 // ManagedProof

@@ -1,15 +1,18 @@
 use instruction::Instructions;
-use processor::{process_delegate_stake, process_init_delegate_stake, process_mine, process_open_managed_proof, process_undelegate_stake};
 use solana_program::{
-    account_info::AccountInfo, declare_id, entrypoint::ProgramResult,
-    program_error::ProgramError, pubkey::Pubkey,
+    account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
+    pubkey::Pubkey,
 };
 
+pub mod delegate_stake;
+pub mod init_delegate_stake;
 pub mod instruction;
-pub mod processor;
-pub mod state;
-pub mod utils;
 pub mod loaders;
+pub mod mine;
+pub mod open_managed_proof;
+pub mod state;
+pub mod undelegate_stake;
+pub mod utils;
 
 // TODO: Update id with generated key
 declare_id!("SWK6MtQGZ4NJaijbHw2UPgtuSAo3NgZoM1dGgQw2x7n");
@@ -30,25 +33,24 @@ pub fn process_instruction(
         .split_first()
         .ok_or(ProgramError::InvalidInstructionData)?;
 
-
     let instruction =
         Instructions::try_from(*instruction).or(Err(ProgramError::InvalidInstructionData))?;
 
     match instruction {
         Instructions::OpenManagedProof => {
-            process_open_managed_proof(accounts, data)?;
-        },
+            open_managed_proof::process_open_managed_proof(accounts, data)?;
+        }
         Instructions::Mine => {
-            process_mine(accounts, data)?;
-        },
+            mine::process_mine(accounts, data)?;
+        }
         Instructions::InitDelegateStake => {
-            process_init_delegate_stake(accounts, data)?;
+            init_delegate_stake::process_init_delegate_stake(accounts, data)?;
         }
         Instructions::DelegateStake => {
-            process_delegate_stake(accounts, data)?;
+            delegate_stake::process_delegate_stake(accounts, data)?;
         }
         Instructions::UndelegateStake => {
-            process_undelegate_stake(accounts, data)?;
+            undelegate_stake::process_undelegate_stake(accounts, data)?;
         }
     }
 
