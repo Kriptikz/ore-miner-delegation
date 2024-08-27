@@ -15,7 +15,6 @@ pub enum Instructions {
     OpenManagedProof,
     InitDelegateStake,
     Mine,
-    Claim,
     DelegateStake,
     UndelegateStake,
 }
@@ -126,53 +125,6 @@ pub fn mine(payer: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
-pub struct ClaimArgs {
-    pub amount: [u8; 8],
-}
-
-impl_to_bytes!(ClaimArgs);
-impl_instruction_from_bytes!(ClaimArgs);
-
-pub fn claim(miner: Pubkey, beneficiary_token_address: Pubkey, amount: u64) -> Instruction {
-    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
-    let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
-
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", miner.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
-
-    let treasury_tokens = spl_associated_token_account::get_associated_token_address(
-        &ore_api::consts::TREASURY_ADDRESS,
-        &ore_api::consts::MINT_ADDRESS,
-    );
-
-    Instruction {
-        program_id: crate::id(),
-        accounts: vec![
-            AccountMeta::new(miner, true),
-            AccountMeta::new(managed_proof_authority.0, false),
-            AccountMeta::new(managed_proof_account.0, false),
-            AccountMeta::new(beneficiary_token_address, false),
-            AccountMeta::new(ore_proof_account.0, false),
-            AccountMeta::new(delegated_stake_account.0, false),
-            AccountMeta::new_readonly(ore_api::consts::TREASURY_ADDRESS, false),
-            AccountMeta::new(treasury_tokens, false),
-            AccountMeta::new_readonly(ore_api::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-        data: [
-            Instructions::Claim.to_vec(),
-            ClaimArgs {
-                amount: amount.to_le_bytes(),
-            }
-            .to_bytes()
-            .to_vec(),
-        ]
-        .concat(),
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct DelegateStakeArgs {
     pub amount: [u8; 8],
 }
@@ -227,14 +179,12 @@ pub struct UndelegateStakeArgs {
 impl_to_bytes!(UndelegateStakeArgs);
 impl_instruction_from_bytes!(UndelegateStakeArgs);
 
-pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instruction {
+pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, beneficiary_token_account: Pubkey, amount: u64) -> Instruction {
     let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
     let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
     let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
 
     let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", staker.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
-
-    let staker_token_account = get_associated_token_address(&staker, &ore_api::consts::MINT_ADDRESS);
 
     Instruction {
         program_id: crate::id(),
@@ -244,7 +194,7 @@ pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instructi
             AccountMeta::new(managed_proof_authority.0, false),
             AccountMeta::new(managed_proof_account.0, false),
             AccountMeta::new(ore_proof_account.0, false),
-            AccountMeta::new(staker_token_account, false),
+            AccountMeta::new(beneficiary_token_account, false),
             AccountMeta::new(delegated_stake_account.0, false),
             AccountMeta::new(ore_api::consts::TREASURY_ADDRESS, false),
             AccountMeta::new(ore_api::consts::TREASURY_TOKENS_ADDRESS, false),

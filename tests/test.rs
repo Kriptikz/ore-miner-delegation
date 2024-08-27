@@ -460,7 +460,7 @@ pub async fn test_claim() {
 
     // Claim from the delegated balance
     let ix =
-        ore_miner_delegation::instruction::claim(context.payer.pubkey(), miner_token_account_addr, ore_proof.balance);
+        ore_miner_delegation::instruction::undelegate_stake(context.payer.pubkey(), context.payer.pubkey(), miner_token_account_addr, ore_proof.balance);
 
     let mut tx =
         Transaction::new_with_payer(&[ix_0, ix], Some(&context.payer.pubkey()));
@@ -655,6 +655,8 @@ pub async fn test_stake() {
     // create managed_proof_authority ata
     let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.pubkey().as_ref()], &ore_miner_delegation::id());
     let ix_1 = create_associated_token_account(&miner.pubkey(), &managed_proof_authority.0, &ore_api::consts::MINT_ADDRESS, &spl_token::id());
+
+    // create stakers ata
     let ix_2 = create_associated_token_account(&miner.pubkey(), &staker.pubkey(), &ore_api::consts::MINT_ADDRESS, &spl_token::id());
     let staker_token_account_addr = spl_associated_token_account::get_associated_token_address(
         &staker.pubkey(),
@@ -663,7 +665,7 @@ pub async fn test_stake() {
 
     // Claim from the delegated balance
     let ix =
-        ore_miner_delegation::instruction::claim(miner.pubkey(), staker_token_account_addr, ore_proof.balance);
+        ore_miner_delegation::instruction::undelegate_stake(miner.pubkey(), miner.pubkey(), staker_token_account_addr, ore_proof.balance);
 
     let mut tx =
         Transaction::new_with_payer(&[ix_0, ix_1, ix_2, ix], Some(&miner.pubkey()));
@@ -698,16 +700,10 @@ pub async fn test_stake() {
 
     assert_eq!(ore_proof.balance, delegated_stake.amount);
 
-    let miner_token_account_addr = spl_associated_token_account::get_associated_token_address(
-        &miner.pubkey(),
-        &ore_api::consts::MINT_ADDRESS,
-    );
-
     let staker_token_account = get_associated_token_address(&staker.pubkey(), &ore_api::consts::MINT_ADDRESS);
     let staker_token_account = context.banks_client.get_account(staker_token_account).await.unwrap().unwrap();
     let staker_token_account = spl_token::state::Account::unpack(&staker_token_account.data).unwrap();
     let staker_token_balance = staker_token_account.amount;
-    // Might need to create managed proof authority token account
 
     // Delegate stake from staker to miner pool
     let ix0 =
@@ -906,7 +902,7 @@ pub async fn test_unstake() {
 
     // Claim from the delegated balance
     let ix =
-        ore_miner_delegation::instruction::claim(miner.pubkey(), miner_token_account_addr, ore_proof.balance);
+        ore_miner_delegation::instruction::undelegate_stake(miner.pubkey(), miner.pubkey(), miner_token_account_addr, ore_proof.balance);
 
     let mut tx =
         Transaction::new_with_payer(&[ix_0, ix_1, ix], Some(&miner.pubkey()));
@@ -1008,8 +1004,8 @@ pub async fn test_unstake() {
 
     // Unstake
     let ix =
-        ore_miner_delegation::instruction::undelegate_stake(staker.pubkey(), miner.pubkey(), miner_token_balance);
-
+        ore_miner_delegation::instruction::undelegate_stake(staker.pubkey(), miner.pubkey(), staker_token_account_addr, miner_token_balance);
+ 
     let mut tx =
         Transaction::new_with_payer(&[ix], Some(&staker.pubkey()));
 

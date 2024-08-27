@@ -4,6 +4,7 @@ use ore_utils::{spl::transfer, AccountDeserialize as _};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar
 };
+use solana_program::msg;
 
 use crate::{instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
@@ -346,83 +347,6 @@ pub fn process_delegate_stake(
     Ok(())
 }
 
-pub fn process_claim(
-    accounts: &[AccountInfo],
-    instruction_data: &[u8],
-) -> Result<(), ProgramError> {
-    let [
-        miner,
-        managed_proof_authority_info,
-        managed_proof_account_info,
-        beneficiary_token_account,
-        ore_proof_account_info,
-        delegated_stake_account_info,
-        treasury_address,
-        treasury_tokens,
-        ore_program,
-        token_program,
-    ] =
-        accounts
-    else {
-        return Err(ProgramError::NotEnoughAccountKeys);
-    };
-
-    // Parse args
-    let args = crate::instruction::ClaimArgs::try_from_bytes(instruction_data)?;
-    let amount = u64::from_le_bytes(args.amount);
-
-    if !miner.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-    load_managed_proof(managed_proof_account_info, miner.key, false)?;
-    load_delegated_stake(delegated_stake_account_info, miner.key, managed_proof_account_info.key, true)?;
-
-    if treasury_tokens.data_is_empty() {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    if *ore_program.key != ore_api::id() {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    if *token_program.key != spl_token::id() {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    let managed_proof_data = managed_proof_account_info.data.borrow();
-    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
-
-    // decrease delegate stake balance
-    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
-        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
-
-        if amount > delegated_stake.amount {
-            return Err(ProgramError::InsufficientFunds);
-        }
-
-        if let Some(new_total) = delegated_stake.amount.checked_sub(amount) {
-            delegated_stake.amount = new_total;
-        } else {
-            return Err(ProgramError::ArithmeticOverflow);
-        }
-    }
-
-    solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(*managed_proof_authority_info.key, *beneficiary_token_account.key, amount),
-        &[
-            managed_proof_authority_info.clone(),
-            beneficiary_token_account.clone(),
-            ore_proof_account_info.clone(),
-            treasury_address.clone(),
-            treasury_tokens.clone(),
-            ore_program.clone(),
-        ],
-        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
-    )?;
-
-    Ok(())
-}
-
 pub fn process_undelegate_stake(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
@@ -433,7 +357,7 @@ pub fn process_undelegate_stake(
         managed_proof_authority_info,
         managed_proof_account_info,
         ore_proof_account_info,
-        staker_token_account_info,
+        beneficiary_token_account_info,
         delegated_stake_account_info,
         treasury,
         treasury_tokens,
@@ -453,9 +377,11 @@ pub fn process_undelegate_stake(
         return Err(ProgramError::MissingRequiredSignature);
     }
 
+    msg!("HERE");
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
+    msg!("HERE");
     load_delegated_stake(delegated_stake_account_info, staker.key, &managed_proof_account_info.key, true)?;
-
+    msg!("HERE");
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
     }
@@ -484,11 +410,11 @@ pub fn process_undelegate_stake(
 
     // stake to ore program
     solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(*managed_proof_authority_info.key, *staker_token_account_info.key, amount),
+        &ore_api::instruction::claim(*managed_proof_authority_info.key, *beneficiary_token_account_info.key, amount),
         &[
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
-            staker_token_account_info.clone(),
+            beneficiary_token_account_info.clone(),
             treasury.clone(),
             treasury_tokens.clone(),
             ore_program.clone(),
