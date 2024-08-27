@@ -2,7 +2,7 @@ use ore_utils::AccountDeserialize as _;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, system_program};
 
 use crate::{
-    instruction::MineArgs, loaders::load_managed_proof, state::ManagedProof,
+    instruction::MineArgs, loaders::{load_delegated_stake, load_managed_proof}, state::ManagedProof,
     utils::AccountDeserialize,
 };
 
@@ -21,6 +21,7 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
     }
 
     load_managed_proof(managed_proof_account_info, miner.key, true)?;
+    load_delegated_stake(delegated_stake_account_info, miner.key, managed_proof_account_info.key, true)?;
 
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
