@@ -4,7 +4,6 @@ use ore_utils::{spl::transfer, AccountDeserialize as _};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar
 };
-use solana_program::msg;
 
 use crate::{instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
@@ -377,11 +376,9 @@ pub fn process_undelegate_stake(
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    msg!("HERE");
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
-    msg!("HERE");
     load_delegated_stake(delegated_stake_account_info, staker.key, &managed_proof_account_info.key, true)?;
-    msg!("HERE");
+
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
     }
