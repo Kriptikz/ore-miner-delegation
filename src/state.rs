@@ -11,8 +11,7 @@ use crate::{
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct ManagedProof {
     pub bump: u8,
-    pub authority_bump: u8,
-    _pad: [u8; 6],
+    _pad: [u8; 7],
     pub miner_authority: Pubkey,
 }
 

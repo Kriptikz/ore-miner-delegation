@@ -4,6 +4,7 @@ use ore_utils::{spl::transfer, AccountDeserialize as _};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar
 };
+use solana_program::msg;
 
 use crate::{instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
@@ -13,7 +14,6 @@ pub fn process_open_managed_proof(
 ) -> Result<(), ProgramError> {
     let [
         miner,
-        managed_proof_authority_info,
         managed_proof_account_info,
         ore_proof_account_info,
         slothashes_sysvar,
@@ -46,23 +46,22 @@ pub fn process_open_managed_proof(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", miner.key.as_ref()], &crate::id());
     let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", miner.key.as_ref()], &crate::id());
 
 
     // CPI to create the proof account
     solana_program::program::invoke_signed(
-        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *miner.key),
+        &ore_api::instruction::open(managed_proof_account_pda.0, managed_proof_account_pda.0, *miner.key),
         &[
             miner.clone(),
-            managed_proof_authority_info.clone(),
+            managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
             rent_sysvar.clone(),
             ore_program.clone(),
             system_program.clone(),
         ],
-        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof_authority_pda.1]]],
+        &[&[b"managed-proof-account", miner.key.as_ref(), &[managed_proof_account_pda.1]]],
     )?;
 
     // Set the ManangedProof account data
@@ -97,7 +96,6 @@ pub fn process_open_managed_proof(
     let parsed_data = ManagedProof::try_from_bytes_mut(&mut data)?;
     
     parsed_data.bump = managed_proof_account_pda.1;
-    parsed_data.authority_bump = managed_proof_authority_pda.1;
     parsed_data.miner_authority = *miner.key;
 
 
@@ -178,8 +176,7 @@ pub fn process_mine(
     instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
     let [
-        fee_payer,
-        managed_proof_authority_info,
+        miner,
         managed_proof_account_info,
         ore_bus_account_info,
         ore_config_account_info,
@@ -198,7 +195,11 @@ pub fn process_mine(
     // Parse args
     let args = MineArgs::try_from_bytes(instruction_data)?;
 
-    load_managed_proof(managed_proof_account_info, fee_payer.key, true)?;
+    if !miner.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    load_managed_proof(managed_proof_account_info, miner.key, true)?;
 
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
@@ -216,16 +217,17 @@ pub fn process_mine(
         return Err(ProgramError::AccountBorrowFailed);
     };
 
-    let managed_proof_data = managed_proof_account_info.data.borrow();
-    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
+    let managed_proof = {
+        let data = managed_proof_account_info.data.borrow();
+        ManagedProof::try_from_bytes(&data)?.clone()
+    };
 
     // CPI to submit the solution
-    //
     let solution = drillx::Solution::new(args.digest, args.nonce);
     solana_program::program::invoke_signed(
-        &ore_api::instruction::mine(*managed_proof_authority_info.key, *managed_proof_authority_info.key, *ore_bus_account_info.key, solution),
+        &ore_api::instruction::mine(*managed_proof_account_info.key, *managed_proof_account_info.key, *ore_bus_account_info.key, solution),
         &[
-            managed_proof_authority_info.clone(),
+            managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
             ore_bus_account_info.clone(),
@@ -234,7 +236,7 @@ pub fn process_mine(
             ore_program.clone(),
             system_program.clone(),
         ],
-        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof.authority_bump]]],
+        &[&[b"managed-proof-account", miner.key.as_ref(), &[managed_proof.bump]]],
     )?;
 
     let balance_after = if let Ok(data)  = ore_proof_account_info.data.try_borrow() {
@@ -271,10 +273,9 @@ pub fn process_delegate_stake(
     let [
         staker,
         miner,
-        managed_proof_authority_info,
         managed_proof_account_info,
         ore_proof_account_info,
-        managed_proof_authority_token_account_info,
+        managed_proof_account_token_account_info,
         staker_token_account_info,
         delegated_stake_account_info,
         treasury,
@@ -306,31 +307,33 @@ pub fn process_delegate_stake(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    let managed_proof_data = managed_proof_account_info.data.borrow();
-    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
+    let managed_proof = {
+        let data = managed_proof_account_info.data.borrow();
+        ManagedProof::try_from_bytes(&data)?.clone()
+    };
 
     // transfer to miners token account
     transfer(
         staker,
         staker_token_account_info,
-        managed_proof_authority_token_account_info,
+        managed_proof_account_token_account_info,
         token_program,
         amount,
     )?;
 
     // stake to ore program
     solana_program::program::invoke_signed(
-        &ore_api::instruction::stake(*managed_proof_authority_info.key, *managed_proof_authority_token_account_info.key, amount),
+        &ore_api::instruction::stake(*managed_proof_account_info.key, *managed_proof_account_token_account_info.key, amount),
         &[
-            managed_proof_authority_info.clone(),
+            managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
-            managed_proof_authority_token_account_info.clone(),
+            managed_proof_account_token_account_info.clone(),
             treasury.clone(),
             treasury_tokens.clone(),
             ore_program.clone(),
             token_program.clone(),
         ],
-        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
+        &[&[b"managed-proof-account", miner.key.as_ref(), &[managed_proof.bump]]],
     )?;
 
     // increase delegate stake balance
@@ -353,7 +356,6 @@ pub fn process_undelegate_stake(
     let [
         staker,
         miner,
-        managed_proof_authority_info,
         managed_proof_account_info,
         ore_proof_account_info,
         beneficiary_token_account_info,
@@ -387,8 +389,10 @@ pub fn process_undelegate_stake(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    let managed_proof_data = managed_proof_account_info.data.borrow();
-    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
+    let managed_proof = {
+        let data = managed_proof_account_info.data.borrow();
+        ManagedProof::try_from_bytes(&data)?.clone()
+    };
 
     // decrease delegate stake balance
     if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
@@ -407,16 +411,16 @@ pub fn process_undelegate_stake(
 
     // stake to ore program
     solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(*managed_proof_authority_info.key, *beneficiary_token_account_info.key, amount),
+        &ore_api::instruction::claim(*managed_proof_account_info.key, *beneficiary_token_account_info.key, amount),
         &[
-            managed_proof_authority_info.clone(),
+            managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
             beneficiary_token_account_info.clone(),
             treasury.clone(),
             treasury_tokens.clone(),
             ore_program.clone(),
         ],
-        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
+        &[&[b"managed-proof-account", miner.key.as_ref(), &[managed_proof.bump]]],
     )?;
 
     Ok(())

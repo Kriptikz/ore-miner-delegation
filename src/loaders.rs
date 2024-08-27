@@ -57,3 +57,18 @@ pub fn load_delegated_stake<'a, 'info> (
 
     Ok(())
 }
+
+pub fn load_program<'a, 'info> (
+    info: &'a AccountInfo<'info>,
+    program_id: &Pubkey,
+) -> Result<(), ProgramError> {
+    if info.key.ne(&program_id) {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    if !info.executable {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    Ok(())
+}
