@@ -1,4 +1,4 @@
-use ore_utils::spl::transfer;
+use ore_utils::transfer;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 
 use crate::{
