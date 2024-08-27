@@ -1,9 +1,8 @@
-use std::{mem::size_of, ops::{Div, Mul}};
+use std::mem::size_of;
 
-use ore_api::loaders::{load_any_bus, load_config, load_proof_with_miner, load_treasury};
 use ore_utils::{spl::transfer, AccountDeserialize as _};
 use solana_program::{
-    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
+    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar
 };
 
 use crate::{instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
@@ -200,9 +199,6 @@ pub fn process_mine(
     let args = MineArgs::try_from_bytes(instruction_data)?;
 
     load_managed_proof(managed_proof_account_info, fee_payer.key, true)?;
-    load_any_bus(ore_bus_account_info, true)?;
-    load_config(ore_config_account_info, false)?;
-    load_proof_with_miner(ore_proof_account_info, managed_proof_authority_info.key, true)?;
 
     if *ore_program.key != ore_api::id() {
         return Err(ProgramError::IncorrectProgramId);
@@ -277,7 +273,6 @@ pub fn process_delegate_stake(
         miner,
         managed_proof_authority_info,
         managed_proof_account_info,
-        ore_config_account_info,
         ore_proof_account_info,
         managed_proof_authority_token_account_info,
         staker_token_account_info,
@@ -301,8 +296,6 @@ pub fn process_delegate_stake(
     }
 
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
-    load_config(ore_config_account_info, false)?;
-    load_treasury(treasury, true)?;
     load_delegated_stake(delegated_stake_account_info, staker.key, &managed_proof_account_info.key, true)?;
 
     if *ore_program.key != ore_api::id() {
@@ -382,7 +375,6 @@ pub fn process_claim(
         return Err(ProgramError::MissingRequiredSignature);
     }
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
-    load_proof_with_miner(ore_proof_account_info, managed_proof_authority_info.key, true)?;
     load_delegated_stake(delegated_stake_account_info, miner.key, managed_proof_account_info.key, true)?;
 
     if treasury_tokens.data_is_empty() {
@@ -440,7 +432,6 @@ pub fn process_undelegate_stake(
         miner,
         managed_proof_authority_info,
         managed_proof_account_info,
-        ore_config_account_info,
         ore_proof_account_info,
         staker_token_account_info,
         delegated_stake_account_info,
@@ -463,8 +454,6 @@ pub fn process_undelegate_stake(
     }
 
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
-    load_config(ore_config_account_info, false)?;
-    load_treasury(treasury, true)?;
     load_delegated_stake(delegated_stake_account_info, staker.key, &managed_proof_account_info.key, true)?;
 
     if *ore_program.key != ore_api::id() {
