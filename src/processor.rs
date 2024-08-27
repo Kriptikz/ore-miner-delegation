@@ -53,8 +53,9 @@ pub fn process_open_managed_proof(
 
     // CPI to create the proof account
     solana_program::program::invoke_signed(
-        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *managed_proof_authority_info.key),
+        &ore_api::instruction::open(managed_proof_authority_pda.0, managed_proof_authority_pda.0, *miner.key),
         &[
+            miner.clone(),
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
@@ -109,7 +110,7 @@ pub fn process_init_delegate_stake(
     _instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
     let [
-        fee_payer,
+        signer,
         miner,
         managed_proof_account_info,
         delegate_stake_account_info,
@@ -135,7 +136,7 @@ pub fn process_init_delegate_stake(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    let delegated_stake_pda = Pubkey::find_program_address(&[b"delegated-stake", fee_payer.key.as_ref(), managed_proof_account_info.key.as_ref()], &crate::id());
+    let delegated_stake_pda = Pubkey::find_program_address(&[b"delegated-stake", signer.key.as_ref(), managed_proof_account_info.key.as_ref()], &crate::id());
 
     let rent = Rent::get()?;
 
@@ -145,7 +146,7 @@ pub fn process_init_delegate_stake(
 
     solana_program::program::invoke_signed(
         &solana_program::system_instruction::create_account(
-            fee_payer.key,
+            signer.key,
             delegate_stake_account_info.key,
             cost,
             space
@@ -154,11 +155,11 @@ pub fn process_init_delegate_stake(
             &crate::id(),
         ),
         &[
-            fee_payer.clone(),
+            signer.clone(),
             delegate_stake_account_info.clone(),
             system_program.clone(),
         ],
-        &[&[b"delegated-stake", fee_payer.key.as_ref(), managed_proof_account_info.key.as_ref(), &[delegated_stake_pda.1]]],
+        &[&[b"delegated-stake", signer.key.as_ref(), managed_proof_account_info.key.as_ref(), &[delegated_stake_pda.1]]],
     )?;
 
     // Set the DelegatedStake initial data
@@ -381,7 +382,7 @@ pub fn process_claim(
         return Err(ProgramError::MissingRequiredSignature);
     }
     load_managed_proof(managed_proof_account_info, miner.key, false)?;
-    load_proof_with_miner(ore_proof_account_info, miner.key, true)?;
+    load_proof_with_miner(ore_proof_account_info, managed_proof_authority_info.key, true)?;
     load_delegated_stake(delegated_stake_account_info, miner.key, managed_proof_account_info.key, true)?;
 
     if treasury_tokens.data_is_empty() {
@@ -396,16 +397,11 @@ pub fn process_claim(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    // Need to use find_program_address here because I need the pda's bump.
-    // Should store this in the managed_proof_account data.
-    let managed_proof_authority_pda = Pubkey::find_program_address(&[b"managed-proof-authority", fee_payer.key.as_ref()], &crate::id());
-    let managed_proof_account_pda = Pubkey::find_program_address(&[b"managed-proof-account", fee_payer.key.as_ref()], &crate::id());
-    if managed_proof_account_pda.0 != *managed_proof_account_info.key {
-        return Err(ProgramError::InvalidAccountData);
-    }
+    let managed_proof_data = managed_proof_account_info.data.borrow();
+    let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
 
     solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(managed_proof_authority_pda.0, *beneficiary_token_account.key, amount),
+        &ore_api::instruction::claim(*managed_proof_authority_info.key, *beneficiary_token_account.key, amount),
         &[
             managed_proof_authority_info.clone(),
             beneficiary_token_account.clone(),
@@ -414,7 +410,7 @@ pub fn process_claim(
             treasury_tokens.clone(),
             ore_program.clone(),
         ],
-        &[&[b"managed-proof-authority", fee_payer.key.as_ref(), &[managed_proof_authority_pda.1]]],
+        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
     )?;
 
     // decrease delegate stake balance

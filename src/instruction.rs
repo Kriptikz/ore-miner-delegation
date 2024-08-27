@@ -133,17 +133,12 @@ pub struct ClaimArgs {
 impl_to_bytes!(ClaimArgs);
 impl_instruction_from_bytes!(ClaimArgs);
 
-pub fn claim(payer: Pubkey, amount: u64) -> Instruction {
-    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", payer.as_ref()], &crate::id());
+pub fn claim(miner: Pubkey, beneficiary_token_address: Pubkey, amount: u64) -> Instruction {
+    let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
     let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
-    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", payer.as_ref()], &crate::id());
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", miner.as_ref()], &crate::id());
 
-    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", payer.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
-
-    let beneficiary_tokens = spl_associated_token_account::get_associated_token_address(
-        &payer,
-        &ore_api::consts::MINT_ADDRESS,
-    );
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", miner.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
 
     let treasury_tokens = spl_associated_token_account::get_associated_token_address(
         &ore_api::consts::TREASURY_ADDRESS,
@@ -153,10 +148,10 @@ pub fn claim(payer: Pubkey, amount: u64) -> Instruction {
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(payer, true),
+            AccountMeta::new(miner, true),
             AccountMeta::new(managed_proof_authority.0, false),
             AccountMeta::new(managed_proof_account.0, false),
-            AccountMeta::new(beneficiary_tokens, false),
+            AccountMeta::new(beneficiary_token_address, false),
             AccountMeta::new(ore_proof_account.0, false),
             AccountMeta::new(delegated_stake_account.0, false),
             AccountMeta::new_readonly(ore_api::consts::TREASURY_ADDRESS, false),
