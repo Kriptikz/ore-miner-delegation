@@ -14,8 +14,7 @@ pub mod state;
 pub mod undelegate_stake;
 pub mod utils;
 
-// TODO: Update id with generated key
-declare_id!("SWK6MtQGZ4NJaijbHw2UPgtuSAo3NgZoM1dGgQw2x7n");
+declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 
 #[cfg(not(feature = "no-entrypoint"))]
 solana_program::entrypoint!(process_instruction);
