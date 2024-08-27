@@ -892,10 +892,6 @@ pub async fn test_unstake() {
 
     assert_eq!(ore_proof.balance, delegated_stake.amount);
 
-    let miner_token_account_addr = spl_associated_token_account::get_associated_token_address(
-        &miner.pubkey(),
-        &ore_api::consts::MINT_ADDRESS,
-    );
     let staker_token_account_addr = spl_associated_token_account::get_associated_token_address(
         &staker.pubkey(),
         &ore_api::consts::MINT_ADDRESS,
