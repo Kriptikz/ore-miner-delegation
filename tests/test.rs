@@ -183,11 +183,15 @@ pub async fn test_mine() {
         &ore_api::id(),
     );
 
-    let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix0 = system_instruction::transfer(&context.payer.pubkey(), &managed_proof_account.0, 100000000);
+    let ix1 = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
 
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix2 = system_instruction::transfer(&context.payer.pubkey(), &delegated_stake_account.0, 100000000);
     let ix_delegate_stake =
         ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
-    let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&context.payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix2, ix_delegate_stake], Some(&context.payer.pubkey()));
 
     let blockhash = context
         .banks_client
@@ -983,6 +987,60 @@ pub async fn test_unstake() {
     let staker_token_balance = staker_token_account.amount;
 
     assert_eq!(managed_proof_token_account_balance, staker_token_balance);
+}
+
+#[tokio::test]
+pub async fn test_init_twice() {
+    let mut context = init_program().await;
+
+    let managed_proof_account = Pubkey::find_program_address(&[b"managed-proof-account", context.payer.pubkey().as_ref()], &ore_miner_delegation::id());
+    let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", context.payer.pubkey().as_ref(), managed_proof_account.0.as_ref()], &ore_miner_delegation::id());
+
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix0 = system_instruction::transfer(&context.payer.pubkey(), &managed_proof_account.0, 100000000);
+    let ix1 = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
+
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix2 = system_instruction::transfer(&context.payer.pubkey(), &delegated_stake_account.0, 100000000);
+    let ix_delegate_stake =
+        ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
+    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix2, ix_delegate_stake], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+    let ix0 = system_instruction::transfer(&context.payer.pubkey(), &managed_proof_account.0, 100000000);
+    let ix1 = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
+
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix2 = system_instruction::transfer(&context.payer.pubkey(), &delegated_stake_account.0, 100000000);
+    let ix_delegate_stake =
+        ore_miner_delegation::instruction::init_delegate_stake(context.payer.pubkey(), context.payer.pubkey());
+    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix2, ix_delegate_stake], Some(&context.payer.pubkey()));
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    assert!(context
+        .banks_client
+        .process_transaction(tx)
+        .await.is_err());
 }
 
 

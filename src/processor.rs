@@ -71,6 +71,24 @@ pub fn process_open_managed_proof(
 
     let cost = rent.minimum_balance(space);
 
+    if managed_proof_account_info.lamports() > 0 {
+        // cleanup any lamports that may have been sent before our program 
+        // created the account
+        solana_program::program::invoke_signed(
+            &solana_program::system_instruction::transfer(
+                managed_proof_account_info.key,
+                miner.key,
+                managed_proof_account_info.lamports(),
+            ),
+            &[
+                miner.clone(),
+                managed_proof_account_info.clone(),
+                system_program.clone(),
+            ],
+            &[&[b"managed-proof-account", miner.key.as_ref(), &[managed_proof_account_pda.1]]],
+        )?;
+    }
+
     solana_program::program::invoke_signed(
         &solana_program::system_instruction::create_account(
             miner.key,
@@ -140,6 +158,24 @@ pub fn process_init_delegate_stake(
     let space = 8 + size_of::<DelegatedStake>();
 
     let cost = rent.minimum_balance(space);
+
+    if delegate_stake_account_info.lamports() > 0 {
+        // cleanup any lamports that may have been sent before our program 
+        // created the account
+        solana_program::program::invoke_signed(
+            &solana_program::system_instruction::transfer(
+                delegate_stake_account_info.key,
+                signer.key,
+                delegate_stake_account_info.lamports(),
+            ),
+            &[
+                signer.clone(),
+                delegate_stake_account_info.clone(),
+                system_program.clone(),
+            ],
+            &[&[b"delegated-stake", signer.key.as_ref(), managed_proof_account_info.key.as_ref(), &[delegated_stake_pda.1]]],
+        )?;
+    }
 
     solana_program::program::invoke_signed(
         &solana_program::system_instruction::create_account(
