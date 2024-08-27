@@ -442,7 +442,6 @@ pub fn process_undelegate_stake(
         managed_proof_account_info,
         ore_config_account_info,
         ore_proof_account_info,
-        managed_proof_authority_token_account_info,
         staker_token_account_info,
         delegated_stake_account_info,
         treasury,
@@ -496,26 +495,16 @@ pub fn process_undelegate_stake(
 
     // stake to ore program
     solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(*managed_proof_authority_info.key, *managed_proof_authority_token_account_info.key, amount),
+        &ore_api::instruction::claim(*managed_proof_authority_info.key, *staker_token_account_info.key, amount),
         &[
             managed_proof_authority_info.clone(),
             ore_proof_account_info.clone(),
-            managed_proof_authority_token_account_info.clone(),
+            staker_token_account_info.clone(),
             treasury.clone(),
             treasury_tokens.clone(),
             ore_program.clone(),
         ],
         &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
-    )?;
-
-
-    // transfer from miner token account
-    transfer(
-        staker,
-        staker_token_account_info,
-        managed_proof_authority_token_account_info,
-        token_program,
-        amount,
     )?;
 
     Ok(())

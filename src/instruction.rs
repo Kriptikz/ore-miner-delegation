@@ -227,7 +227,6 @@ pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instructi
     let delegated_stake_account = Pubkey::find_program_address(&[b"delegated-stake", staker.as_ref(), managed_proof_account.0.as_ref()], &crate::id());
 
     let staker_token_account = get_associated_token_address(&staker, &ore_api::consts::MINT_ADDRESS);
-    let managed_proof_token_account = get_associated_token_address(&managed_proof_authority.0, &ore_api::consts::MINT_ADDRESS);
 
     Instruction {
         program_id: crate::id(),
@@ -238,7 +237,6 @@ pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instructi
             AccountMeta::new(managed_proof_account.0, false),
             AccountMeta::new_readonly(ore_api::consts::CONFIG_ADDRESS, false),
             AccountMeta::new(ore_proof_account.0, false),
-            AccountMeta::new(managed_proof_token_account, false),
             AccountMeta::new(staker_token_account, false),
             AccountMeta::new(delegated_stake_account.0, false),
             AccountMeta::new(ore_api::consts::TREASURY_ADDRESS, false),
