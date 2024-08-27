@@ -6,7 +6,7 @@ use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program, rent::Rent, sysvar::Sysvar, msg
 };
 
-use crate::{instruction::{DelegateStakeArgs, MineArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
+use crate::{instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs}, loaders::{load_delegated_stake, load_managed_proof}, state::{DelegatedStake, ManagedProof}, utils::{AccountDeserialize, Discriminator}};
 
 pub fn process_open_managed_proof(
     accounts: &[AccountInfo],
@@ -293,7 +293,7 @@ pub fn process_delegate_stake(
     };
 
     // Parse args
-    let args = DelegateStakeArgs::try_from_bytes(instruction_data)?;
+    let args = UndelegateStakeArgs::try_from_bytes(instruction_data)?;
     let amount = u64::from_le_bytes(args.amount);
 
     if !staker.is_signer {

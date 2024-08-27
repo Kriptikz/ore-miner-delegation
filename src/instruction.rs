@@ -219,6 +219,15 @@ pub fn delegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instruction
     }
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct UndelegateStakeArgs {
+    pub amount: [u8; 8],
+}
+
+impl_to_bytes!(UndelegateStakeArgs);
+impl_instruction_from_bytes!(UndelegateStakeArgs);
+
 pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instruction {
     let managed_proof_authority = Pubkey::find_program_address(&[b"managed-proof-authority", miner.as_ref()], &crate::id());
     let ore_proof_account = Pubkey::find_program_address(&[ore_api::consts::PROOF, managed_proof_authority.0.as_ref()], &ore_api::id());
@@ -246,7 +255,7 @@ pub fn undelegate_stake(staker: Pubkey, miner: Pubkey, amount: u64) -> Instructi
         ],
         data: [
             Instructions::UndelegateStake.to_vec(),
-            DelegateStakeArgs {
+            UndelegateStakeArgs {
                 amount: amount.to_le_bytes(),
             }
             .to_bytes()
