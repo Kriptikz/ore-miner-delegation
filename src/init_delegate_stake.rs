@@ -1,15 +1,13 @@
 use std::mem::size_of;
 
-use ore_utils::spl::transfer;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
     system_program, sysvar::Sysvar,
 };
 
 use crate::{
-    instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs},
-    loaders::{load_delegated_stake, load_managed_proof},
-    state::{DelegatedStake, ManagedProof},
+    loaders::load_managed_proof,
+    state::DelegatedStake,
     utils::{AccountDeserialize, Discriminator},
 };
 

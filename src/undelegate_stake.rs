@@ -1,10 +1,10 @@
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 
 use crate::{
-    instruction::{DelegateStakeArgs, MineArgs, UndelegateStakeArgs},
+    instruction::DelegateStakeArgs,
     loaders::{load_delegated_stake, load_managed_proof},
-    state::{DelegatedStake, ManagedProof},
-    utils::{AccountDeserialize, Discriminator},
+    state::ManagedProof,
+    utils::AccountDeserialize,
 };
 
 pub fn process_undelegate_stake(
