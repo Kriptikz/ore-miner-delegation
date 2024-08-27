@@ -400,6 +400,21 @@ pub fn process_claim(
     let managed_proof_data = managed_proof_account_info.data.borrow();
     let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
 
+    // decrease delegate stake balance
+    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
+        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
+
+        if amount > delegated_stake.amount {
+            return Err(ProgramError::InsufficientFunds);
+        }
+
+        if let Some(new_total) = delegated_stake.amount.checked_sub(amount) {
+            delegated_stake.amount = new_total;
+        } else {
+            return Err(ProgramError::ArithmeticOverflow);
+        }
+    }
+
     solana_program::program::invoke_signed(
         &ore_api::instruction::claim(*managed_proof_authority_info.key, *beneficiary_token_account.key, amount),
         &[
@@ -413,16 +428,6 @@ pub fn process_claim(
         &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
     )?;
 
-    // decrease delegate stake balance
-    if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
-        let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
-
-        if let Some(new_total) = delegated_stake.amount.checked_sub(amount) {
-            delegated_stake.amount = new_total;
-        } else {
-            return Err(ProgramError::ArithmeticOverflow);
-        }
-    }
     Ok(())
 }
 
@@ -474,20 +479,6 @@ pub fn process_undelegate_stake(
     let managed_proof_data = managed_proof_account_info.data.borrow();
     let managed_proof = ManagedProof::try_from_bytes(&managed_proof_data)?;
 
-    // stake to ore program
-    solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(*managed_proof_authority_info.key, *managed_proof_authority_token_account_info.key, amount),
-        &[
-            managed_proof_authority_info.clone(),
-            ore_proof_account_info.clone(),
-            managed_proof_authority_token_account_info.clone(),
-            treasury.clone(),
-            treasury_tokens.clone(),
-            ore_program.clone(),
-        ],
-        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
-    )?;
-
     // decrease delegate stake balance
     if let Ok(mut data) = delegated_stake_account_info.data.try_borrow_mut() {
         let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
@@ -502,6 +493,21 @@ pub fn process_undelegate_stake(
             return Err(ProgramError::ArithmeticOverflow);
         }
     }
+
+    // stake to ore program
+    solana_program::program::invoke_signed(
+        &ore_api::instruction::claim(*managed_proof_authority_info.key, *managed_proof_authority_token_account_info.key, amount),
+        &[
+            managed_proof_authority_info.clone(),
+            ore_proof_account_info.clone(),
+            managed_proof_authority_token_account_info.clone(),
+            treasury.clone(),
+            treasury_tokens.clone(),
+            ore_program.clone(),
+        ],
+        &[&[b"managed-proof-authority", miner.key.as_ref(), &[managed_proof.authority_bump]]],
+    )?;
+
 
     // transfer from miner token account
     transfer(
