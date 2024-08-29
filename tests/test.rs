@@ -1,6 +1,6 @@
 use drillx::equix;
 use ore_api::consts::{BUS_ADDRESSES, NOOP_PROGRAM_ID};
-use ore_miner_delegation::utils::AccountDeserialize as _;
+use ore_miner_delegation::{pda::{delegated_stake_pda, managed_proof_pda}, utils::AccountDeserialize as _};
 use ore_utils::AccountDeserialize as _;
 use solana_program::{clock::Clock, pubkey::Pubkey, rent::Rent, system_instruction};
 use solana_program_test::{processor, read_file, ProgramTest, ProgramTestContext};
@@ -19,10 +19,7 @@ async fn test_register_proof() {
     let mut banks_client = context.banks_client;
     let payer = context.payer;
 
-    let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, payer.pubkey().as_ref()],
-        &ore_miner_delegation::id(),
-    );
+    let managed_proof_account = managed_proof_pda(payer.pubkey());
     let ore_proof_account = Pubkey::find_program_address(
         &[ore_api::consts::PROOF, managed_proof_account.0.as_ref()],
         &ore_api::id(),
@@ -102,18 +99,7 @@ async fn test_register_proof() {
 pub async fn test_init_delegate_stake_account() {
     let mut context = init_program().await;
 
-    let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
-        &ore_miner_delegation::id(),
-    );
-    let delegated_stake_account = Pubkey::find_program_address(
-        &[
-            ore_miner_delegation::consts::DELEGATED_STAKE,
-            context.payer.pubkey().as_ref(),
-            managed_proof_account.0.as_ref(),
-        ],
-        &ore_miner_delegation::id(),
-    );
+    let delegated_stake_account = delegated_stake_pda(context.payer.pubkey(), context.payer.pubkey());
 
     let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
 

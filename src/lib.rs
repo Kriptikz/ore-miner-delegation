@@ -14,6 +14,7 @@ pub mod state;
 pub mod undelegate_stake;
 pub mod consts;
 pub mod utils;
+pub mod pda;
 
 declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 
