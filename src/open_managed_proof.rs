@@ -41,7 +41,7 @@ pub fn process_open_managed_proof(
     }
 
     let managed_proof_account_pda = Pubkey::find_program_address(
-        &[b"managed-proof-account", miner.key.as_ref()],
+        &[crate::consts::MANAGED_PROOF, miner.key.as_ref()],
         &crate::id(),
     );
 
@@ -62,7 +62,7 @@ pub fn process_open_managed_proof(
             system_program.clone(),
         ],
         &[&[
-            b"managed-proof-account",
+            crate::consts::MANAGED_PROOF,
             miner.key.as_ref(),
             &[managed_proof_account_pda.1],
         ]],
@@ -90,7 +90,7 @@ pub fn process_open_managed_proof(
                 system_program.clone(),
             ],
             &[&[
-                b"managed-proof-account",
+                crate::consts::MANAGED_PROOF,
                 miner.key.as_ref(),
                 &[managed_proof_account_pda.1],
             ]],
@@ -113,7 +113,7 @@ pub fn process_open_managed_proof(
             system_program.clone(),
         ],
         &[&[
-            b"managed-proof-account",
+            crate::consts::MANAGED_PROOF,
             miner.key.as_ref(),
             &[managed_proof_account_pda.1],
         ]],

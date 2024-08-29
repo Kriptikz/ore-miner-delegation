@@ -50,7 +50,7 @@ pub fn load_delegated_stake<'a, 'info>(
 
     let delegated_stake_pda = Pubkey::create_program_address(
         &[
-            b"delegated-stake",
+            crate::consts::DELEGATED_STAKE,
             delegate_authority.as_ref(),
             managed_proof.as_ref(),
             &[delegated_stake.bump],

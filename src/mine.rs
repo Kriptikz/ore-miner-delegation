@@ -63,7 +63,7 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
             system_program.clone(),
         ],
         &[&[
-            b"managed-proof-account",
+            crate::consts::MANAGED_PROOF,
             miner.key.as_ref(),
             &[managed_proof.bump],
         ]],

@@ -73,7 +73,7 @@ pub fn process_delegate_stake(
             token_program.clone(),
         ],
         &[&[
-            b"managed-proof-account",
+            crate::consts::MANAGED_PROOF,
             miner.key.as_ref(),
             &[managed_proof.bump],
         ]],

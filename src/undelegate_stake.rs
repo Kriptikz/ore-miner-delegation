@@ -77,7 +77,7 @@ pub fn process_undelegate_stake(
             ore_program.clone(),
         ],
         &[&[
-            b"managed-proof-account",
+            crate::consts::MANAGED_PROOF,
             miner.key.as_ref(),
             &[managed_proof.bump],
         ]],

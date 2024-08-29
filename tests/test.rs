@@ -20,7 +20,7 @@ async fn test_register_proof() {
     let payer = context.payer;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", payer.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, payer.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let ore_proof_account = Pubkey::find_program_address(
@@ -103,12 +103,12 @@ pub async fn test_init_delegate_stake_account() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", context.payer.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             context.payer.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -192,12 +192,12 @@ pub async fn test_mine() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", context.payer.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             context.payer.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -346,12 +346,12 @@ pub async fn test_claim() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", context.payer.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             context.payer.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -569,12 +569,12 @@ pub async fn test_stake() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", miner.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             miner.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -808,7 +808,7 @@ pub async fn test_stake() {
 
     let staker_delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             staker.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -853,12 +853,12 @@ pub async fn test_unstake() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", miner.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             miner.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -1097,7 +1097,7 @@ pub async fn test_unstake() {
 
     let staker_delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             staker.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -1156,12 +1156,12 @@ pub async fn test_init_twice() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", context.payer.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             context.payer.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -1261,12 +1261,12 @@ pub async fn test_unstake_faker() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[b"managed-proof-account", miner.pubkey().as_ref()],
+        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             miner.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],
@@ -1498,7 +1498,7 @@ pub async fn test_unstake_faker() {
 
     let staker_delegated_stake_account = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            ore_miner_delegation::consts::DELEGATED_STAKE,
             staker.pubkey().as_ref(),
             managed_proof_account.0.as_ref(),
         ],

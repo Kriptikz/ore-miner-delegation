@@ -37,7 +37,7 @@ pub fn process_init_delegate_stake(
 
     let delegated_stake_pda = Pubkey::find_program_address(
         &[
-            b"delegated-stake",
+            crate::consts::DELEGATED_STAKE,
             signer.key.as_ref(),
             managed_proof_account_info.key.as_ref(),
         ],
@@ -65,7 +65,7 @@ pub fn process_init_delegate_stake(
                 system_program.clone(),
             ],
             &[&[
-                b"delegated-stake",
+                crate::consts::DELEGATED_STAKE,
                 signer.key.as_ref(),
                 managed_proof_account_info.key.as_ref(),
                 &[delegated_stake_pda.1],
@@ -89,7 +89,7 @@ pub fn process_init_delegate_stake(
             system_program.clone(),
         ],
         &[&[
-            b"delegated-stake",
+            crate::consts::DELEGATED_STAKE,
             signer.key.as_ref(),
             managed_proof_account_info.key.as_ref(),
             &[delegated_stake_pda.1],
