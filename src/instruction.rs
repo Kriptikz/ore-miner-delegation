@@ -55,15 +55,16 @@ pub fn open_managed_proof(miner: Pubkey) -> Instruction {
     }
 }
 
-pub fn init_delegate_stake(staker: Pubkey, miner: Pubkey) -> Instruction {
+pub fn init_delegate_stake(staker: Pubkey, miner: Pubkey, payer: Pubkey) -> Instruction {
     let managed_proof_address = managed_proof_pda(miner);
     let delegated_stake_address = delegated_stake_pda(miner, staker);
 
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(staker, true),
+            AccountMeta::new(staker, false),
             AccountMeta::new(miner, false),
+            AccountMeta::new(payer, true),
             AccountMeta::new(managed_proof_address.0, false),
             AccountMeta::new(delegated_stake_address.0, false),
             AccountMeta::new_readonly(sysvar::rent::id(), false),

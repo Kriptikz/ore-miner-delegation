@@ -15,7 +15,7 @@ pub fn process_init_delegate_stake(
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> Result<(), ProgramError> {
-    let [signer, miner, managed_proof_account_info, delegate_stake_account_info, rent_sysvar, system_program] =
+    let [staker, miner, payer, managed_proof_account_info, delegate_stake_account_info, rent_sysvar, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -38,7 +38,7 @@ pub fn process_init_delegate_stake(
     let delegated_stake_pda = Pubkey::find_program_address(
         &[
             crate::consts::DELEGATED_STAKE,
-            signer.key.as_ref(),
+            staker.key.as_ref(),
             managed_proof_account_info.key.as_ref(),
         ],
         &crate::id(),
@@ -56,17 +56,17 @@ pub fn process_init_delegate_stake(
         solana_program::program::invoke_signed(
             &solana_program::system_instruction::transfer(
                 delegate_stake_account_info.key,
-                signer.key,
+                payer.key,
                 delegate_stake_account_info.lamports(),
             ),
             &[
-                signer.clone(),
+                payer.clone(),
                 delegate_stake_account_info.clone(),
                 system_program.clone(),
             ],
             &[&[
                 crate::consts::DELEGATED_STAKE,
-                signer.key.as_ref(),
+                staker.key.as_ref(),
                 managed_proof_account_info.key.as_ref(),
                 &[delegated_stake_pda.1],
             ]],
@@ -75,7 +75,7 @@ pub fn process_init_delegate_stake(
 
     solana_program::program::invoke_signed(
         &solana_program::system_instruction::create_account(
-            signer.key,
+            payer.key,
             delegate_stake_account_info.key,
             cost,
             space
@@ -84,13 +84,13 @@ pub fn process_init_delegate_stake(
             &crate::id(),
         ),
         &[
-            signer.clone(),
+            payer.clone(),
             delegate_stake_account_info.clone(),
             system_program.clone(),
         ],
         &[&[
             crate::consts::DELEGATED_STAKE,
-            signer.key.as_ref(),
+            staker.key.as_ref(),
             managed_proof_account_info.key.as_ref(),
             &[delegated_stake_pda.1],
         ]],

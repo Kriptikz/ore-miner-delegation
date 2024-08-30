@@ -123,6 +123,7 @@ pub async fn test_init_delegate_stake_account() {
     let ix = ore_miner_delegation::instruction::init_delegate_stake(
         context.payer.pubkey(),
         context.payer.pubkey(),
+        context.payer.pubkey(),
     );
 
     let mut tx = Transaction::new_with_payer(&[ix], Some(&context.payer.pubkey()));
@@ -206,6 +207,7 @@ pub async fn test_mine() {
         100000000,
     );
     let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        context.payer.pubkey(),
         context.payer.pubkey(),
         context.payer.pubkey(),
     );
@@ -351,6 +353,7 @@ pub async fn test_claim() {
     let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
 
     let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        context.payer.pubkey(),
         context.payer.pubkey(),
         context.payer.pubkey(),
     );
@@ -534,10 +537,12 @@ pub async fn test_stake() {
 
     let miner = Keypair::new();
     let staker = Keypair::new();
+    let payer = Keypair::new();
 
     // Send miner and staker sol
     let ix0 = system_instruction::transfer(&context.payer.pubkey(), &miner.pubkey(), 1000000000);
     let ix1 = system_instruction::transfer(&context.payer.pubkey(), &staker.pubkey(), 1000000000);
+    let ix2 = system_instruction::transfer(&context.payer.pubkey(), &payer.pubkey(), 1000000000);
 
     let blockhash = context
         .banks_client
@@ -545,7 +550,7 @@ pub async fn test_stake() {
         .await
         .expect("should get latest blockhash");
 
-    let mut tx = Transaction::new_with_payer(&[ix0, ix1], Some(&context.payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix2], Some(&context.payer.pubkey()));
     tx.sign(&[&context.payer], blockhash);
 
     context
@@ -574,8 +579,8 @@ pub async fn test_stake() {
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
     let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey());
-    let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&miner.pubkey()));
+        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), payer.pubkey());
+    let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&payer.pubkey()));
 
     let blockhash = context
         .banks_client
@@ -583,7 +588,7 @@ pub async fn test_stake() {
         .await
         .expect("should get latest blockhash");
 
-    tx.sign(&[&miner], blockhash);
+    tx.sign(&[&miner, &payer], blockhash);
 
     context
         .banks_client
@@ -710,7 +715,7 @@ pub async fn test_stake() {
         ore_proof.balance,
     );
 
-    let mut tx = Transaction::new_with_payer(&[ix_2, ix], Some(&miner.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix_2, ix], Some(&payer.pubkey()));
 
     let blockhash = context
         .banks_client
@@ -718,7 +723,7 @@ pub async fn test_stake() {
         .await
         .expect("should get latest blockhash");
 
-    tx.sign(&[&miner], blockhash);
+    tx.sign(&[&miner, &payer], blockhash);
 
     context
         .banks_client
@@ -761,7 +766,7 @@ pub async fn test_stake() {
 
     // create managed_proof_authority ata
     let ix1 = create_associated_token_account(
-        &miner.pubkey(),
+        &payer.pubkey(),
         &managed_proof_account.0,
         &ore_api::consts::MINT_ADDRESS,
         &spl_token::id(),
@@ -769,14 +774,14 @@ pub async fn test_stake() {
 
     // Delegate stake from staker to miner pool
     let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey());
+        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), payer.pubkey());
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
         staker_token_balance,
     );
 
-    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix], Some(&staker.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix], Some(&payer.pubkey()));
 
     let blockhash = context
         .banks_client
@@ -784,7 +789,7 @@ pub async fn test_stake() {
         .await
         .expect("should get latest blockhash");
 
-    tx.sign(&[&staker, &miner], blockhash);
+    tx.sign(&[&staker, &payer], blockhash);
 
     context
         .banks_client
@@ -818,10 +823,12 @@ pub async fn test_unstake() {
 
     let miner = Keypair::new();
     let staker = Keypair::new();
+    let payer = Keypair::new();
 
     // Send miner and staker sol
     let ix0 = system_instruction::transfer(&context.payer.pubkey(), &miner.pubkey(), 1000000000);
     let ix1 = system_instruction::transfer(&context.payer.pubkey(), &staker.pubkey(), 1000000000);
+    let ix2 = system_instruction::transfer(&context.payer.pubkey(), &payer.pubkey(), 1000000000);
 
     let blockhash = context
         .banks_client
@@ -829,7 +836,7 @@ pub async fn test_unstake() {
         .await
         .expect("should get latest blockhash");
 
-    let mut tx = Transaction::new_with_payer(&[ix0, ix1], Some(&context.payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix0, ix1, ix2], Some(&context.payer.pubkey()));
     tx.sign(&[&context.payer], blockhash);
 
     context
@@ -858,7 +865,7 @@ pub async fn test_unstake() {
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
     let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey());
+        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), payer.pubkey());
     let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&miner.pubkey()));
 
     let blockhash = context
@@ -867,7 +874,7 @@ pub async fn test_unstake() {
         .await
         .expect("should get latest blockhash");
 
-    tx.sign(&[&miner], blockhash);
+    tx.sign(&[&miner, &payer], blockhash);
 
     context
         .banks_client
@@ -1058,7 +1065,7 @@ pub async fn test_unstake() {
 
     // Delegate stake from staker to miner pool
     let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey());
+        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), payer.pubkey());
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
@@ -1168,6 +1175,7 @@ pub async fn test_init_twice() {
     let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
         context.payer.pubkey(),
         context.payer.pubkey(),
+        context.payer.pubkey(),
     );
     let mut tx = Transaction::new_with_payer(
         &[ix0, ix1, ix2, ix_delegate_stake],
@@ -1199,6 +1207,7 @@ pub async fn test_init_twice() {
         100000000,
     );
     let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        context.payer.pubkey(),
         context.payer.pubkey(),
         context.payer.pubkey(),
     );
@@ -1266,7 +1275,7 @@ pub async fn test_unstake_faker() {
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
     let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey());
+        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), miner.pubkey());
     let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&miner.pubkey()));
 
     let blockhash = context
@@ -1459,7 +1468,7 @@ pub async fn test_unstake_faker() {
 
     // Delegate stake from staker to miner pool
     let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey());
+        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), miner.pubkey());
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
