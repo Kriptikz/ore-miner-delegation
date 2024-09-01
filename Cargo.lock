@@ -2608,6 +2608,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account 3.0.2",
  "spl-token",
+ "thiserror",
  "tokio",
 ]
 

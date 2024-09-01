@@ -25,6 +25,7 @@ ore-api = "2.1.8"
 ore-utils = "2.1.8"
 drillx = "2.1.0"
 mpl-token-metadata = "4.1.2"
+thiserror = "1.0.57"
 
 [dev-dependencies]
 solana-program-test = "1.18.14"
