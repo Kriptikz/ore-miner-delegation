@@ -1,8 +1,14 @@
 use ore_utils::transfer;
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, clock::Clock, sysvar::Sysvar};
+use solana_program::{
+    account_info::AccountInfo, clock::Clock, program_error::ProgramError, sysvar::Sysvar,
+};
 
 use crate::{
-    error::OreDelegationError, instruction::UndelegateStakeArgs, loaders::{load_delegated_stake, load_managed_proof}, state::ManagedProof, utils::AccountDeserialize
+    error::OreDelegationError,
+    instruction::UndelegateStakeArgs,
+    loaders::{load_delegated_stake, load_managed_proof},
+    state::ManagedProof,
+    utils::AccountDeserialize,
 };
 
 pub fn process_delegate_stake(
@@ -18,7 +24,7 @@ pub fn process_delegate_stake(
     let clock = Clock::get()?;
 
     let current_timestamp = clock.unix_timestamp;
-    
+
     if let Some(secs_passed_hour) = current_timestamp.checked_rem(3600) {
         // passed 5 mins
         if secs_passed_hour > 300 {

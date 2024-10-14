@@ -19,4 +19,3 @@ pub fn delegated_stake_pda(miner: Pubkey, staker: Pubkey) -> (Pubkey, u8) {
         &crate::id(),
     )
 }
-

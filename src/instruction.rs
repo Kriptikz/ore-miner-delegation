@@ -9,7 +9,10 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-use crate::{impl_instruction_from_bytes, impl_to_bytes, pda::{delegated_stake_pda, managed_proof_pda}};
+use crate::{
+    impl_instruction_from_bytes, impl_to_bytes,
+    pda::{delegated_stake_pda, managed_proof_pda},
+};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]

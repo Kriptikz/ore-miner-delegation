@@ -1,6 +1,9 @@
 use drillx::equix;
 use ore_api::consts::{BUS_ADDRESSES, NOOP_PROGRAM_ID};
-use ore_miner_delegation::{pda::{delegated_stake_pda, managed_proof_pda}, utils::AccountDeserialize as _};
+use ore_miner_delegation::{
+    pda::{delegated_stake_pda, managed_proof_pda},
+    utils::AccountDeserialize as _,
+};
 use ore_utils::AccountDeserialize as _;
 use solana_program::{clock::Clock, pubkey::Pubkey, rent::Rent, system_instruction};
 use solana_program_test::{processor, read_file, ProgramTest, ProgramTestContext};
@@ -99,7 +102,8 @@ async fn test_register_proof() {
 pub async fn test_init_delegate_stake_account() {
     let mut context = init_program().await;
 
-    let delegated_stake_account = delegated_stake_pda(context.payer.pubkey(), context.payer.pubkey());
+    let delegated_stake_account =
+        delegated_stake_pda(context.payer.pubkey(), context.payer.pubkey());
 
     let ix = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
 
@@ -179,7 +183,10 @@ pub async fn test_mine() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            context.payer.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -334,7 +341,10 @@ pub async fn test_claim() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            context.payer.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -560,7 +570,10 @@ pub async fn test_stake() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            miner.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -578,8 +591,11 @@ pub async fn test_stake() {
 
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
-    let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), payer.pubkey());
+    let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        miner.pubkey(),
+        miner.pubkey(),
+        payer.pubkey(),
+    );
     let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&payer.pubkey()));
 
     let blockhash = context
@@ -784,8 +800,11 @@ pub async fn test_stake() {
     context.set_sysvar::<Clock>(&new_clock);
 
     // Delegate stake from staker to miner pool
-    let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), payer.pubkey());
+    let ix0 = ore_miner_delegation::instruction::init_delegate_stake(
+        staker.pubkey(),
+        miner.pubkey(),
+        payer.pubkey(),
+    );
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
@@ -857,7 +876,10 @@ pub async fn test_unstake() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            miner.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -875,8 +897,11 @@ pub async fn test_unstake() {
 
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
-    let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), payer.pubkey());
+    let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        miner.pubkey(),
+        miner.pubkey(),
+        payer.pubkey(),
+    );
     let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&miner.pubkey()));
 
     let blockhash = context
@@ -1086,8 +1111,11 @@ pub async fn test_unstake() {
     context.set_sysvar::<Clock>(&new_clock);
 
     // Delegate stake from staker to miner pool
-    let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), payer.pubkey());
+    let ix0 = ore_miner_delegation::instruction::init_delegate_stake(
+        staker.pubkey(),
+        miner.pubkey(),
+        payer.pubkey(),
+    );
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
@@ -1171,7 +1199,10 @@ pub async fn test_init_twice() {
     let mut context = init_program().await;
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, context.payer.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            context.payer.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -1278,7 +1309,10 @@ pub async fn test_unstake_faker() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            miner.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -1296,8 +1330,11 @@ pub async fn test_unstake_faker() {
 
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
-    let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), miner.pubkey());
+    let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        miner.pubkey(),
+        miner.pubkey(),
+        miner.pubkey(),
+    );
     let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&miner.pubkey()));
 
     let blockhash = context
@@ -1499,10 +1536,12 @@ pub async fn test_unstake_faker() {
 
     context.set_sysvar::<Clock>(&new_clock);
 
-
     // Delegate stake from staker to miner pool
-    let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), miner.pubkey());
+    let ix0 = ore_miner_delegation::instruction::init_delegate_stake(
+        staker.pubkey(),
+        miner.pubkey(),
+        miner.pubkey(),
+    );
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
@@ -1606,7 +1645,10 @@ pub async fn test_stake_window() {
         .expect("process_transaction should be ok");
 
     let managed_proof_account = Pubkey::find_program_address(
-        &[ore_miner_delegation::consts::MANAGED_PROOF, miner.pubkey().as_ref()],
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            miner.pubkey().as_ref(),
+        ],
         &ore_miner_delegation::id(),
     );
     let delegated_stake_account = Pubkey::find_program_address(
@@ -1624,8 +1666,11 @@ pub async fn test_stake_window() {
 
     let ix = ore_miner_delegation::instruction::open_managed_proof(miner.pubkey());
 
-    let ix_delegate_stake =
-        ore_miner_delegation::instruction::init_delegate_stake(miner.pubkey(), miner.pubkey(), miner.pubkey());
+    let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        miner.pubkey(),
+        miner.pubkey(),
+        miner.pubkey(),
+    );
     let mut tx = Transaction::new_with_payer(&[ix, ix_delegate_stake], Some(&miner.pubkey()));
 
     let blockhash = context
@@ -1827,10 +1872,12 @@ pub async fn test_stake_window() {
 
     context.set_sysvar::<Clock>(&new_clock);
 
-
     // Delegate stake from staker to miner pool
-    let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), miner.pubkey());
+    let ix0 = ore_miner_delegation::instruction::init_delegate_stake(
+        staker.pubkey(),
+        miner.pubkey(),
+        miner.pubkey(),
+    );
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
@@ -1847,10 +1894,7 @@ pub async fn test_stake_window() {
 
     tx.sign(&[&staker, &miner], blockhash);
 
-    assert!(context
-        .banks_client
-        .process_transaction(tx)
-        .await.is_err());
+    assert!(context.banks_client.process_transaction(tx).await.is_err());
 
     // Update clock to be 5 minutes and 1 second after the hour on 30 Aug, 2024
     let new_clock = solana_program::clock::Clock {
@@ -1863,10 +1907,12 @@ pub async fn test_stake_window() {
 
     context.set_sysvar::<Clock>(&new_clock);
 
-
     // Delegate stake from staker to miner pool
-    let ix0 =
-        ore_miner_delegation::instruction::init_delegate_stake(staker.pubkey(), miner.pubkey(), miner.pubkey());
+    let ix0 = ore_miner_delegation::instruction::init_delegate_stake(
+        staker.pubkey(),
+        miner.pubkey(),
+        miner.pubkey(),
+    );
     let ix = ore_miner_delegation::instruction::delegate_stake(
         staker.pubkey(),
         miner.pubkey(),
@@ -1883,10 +1929,7 @@ pub async fn test_stake_window() {
 
     tx.sign(&[&staker, &miner], blockhash);
 
-    assert!(context
-        .banks_client
-        .process_transaction(tx)
-        .await.is_err())
+    assert!(context.banks_client.process_transaction(tx).await.is_err())
 }
 
 pub async fn init_program() -> ProgramTestContext {

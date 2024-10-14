@@ -4,18 +4,18 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+pub mod consts;
 pub mod delegate_stake;
+pub mod error;
 pub mod init_delegate_stake;
 pub mod instruction;
 pub mod loaders;
 pub mod mine;
 pub mod open_managed_proof;
+pub mod pda;
 pub mod state;
 pub mod undelegate_stake;
-pub mod consts;
 pub mod utils;
-pub mod pda;
-pub mod error;
 
 declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 

@@ -13,4 +13,3 @@ impl From<OreDelegationError> for solana_program::program_error::ProgramError {
         solana_program::program_error::ProgramError::Custom(e as u32)
     }
 }
-
