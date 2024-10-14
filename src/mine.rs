@@ -1,4 +1,4 @@
-use ore_utils::AccountDeserialize as _;
+use steel::AccountDeserialize as _;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, system_program};
 
 use crate::{
@@ -9,8 +9,9 @@ use crate::{
 };
 
 pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result<(), ProgramError> {
+    let (required_accounts, optional_accounts) = accounts.split_at(10);
     let [miner, managed_proof_account_info, ore_bus_account_info, ore_config_account_info, ore_proof_account_info, delegated_stake_account_info, slothashes_sysvar, instructions_sysvar, ore_program, system_program] =
-        accounts
+        required_accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -50,15 +51,7 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
         ManagedProof::try_from_bytes(&data)?.clone()
     };
 
-    // CPI to submit the solution
-    let solution = drillx::Solution::new(args.digest, args.nonce);
-    solana_program::program::invoke_signed(
-        &ore_api::instruction::mine(
-            *managed_proof_account_info.key,
-            *managed_proof_account_info.key,
-            *ore_bus_account_info.key,
-            solution,
-        ),
+    let mine_accounts = 
         &[
             managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
@@ -68,7 +61,21 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
             instructions_sysvar.clone(),
             ore_program.clone(),
             system_program.clone(),
-        ],
+        ];
+
+    // CPI to submit the solution
+    let solution = drillx::Solution::new(args.digest, args.nonce);
+    let mine_accounts = [mine_accounts, optional_accounts].concat();
+    let optional_accounts = optional_accounts.iter().map(|a| *a.key).collect();
+    solana_program::program::invoke_signed(
+        &ore_api::prelude::mine(
+            *managed_proof_account_info.key,
+            *managed_proof_account_info.key,
+            *ore_bus_account_info.key,
+            solution,
+            optional_accounts
+        ),
+        &mine_accounts,
         &[&[
             crate::consts::MANAGED_PROOF,
             miner.key.as_ref(),

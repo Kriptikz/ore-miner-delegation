@@ -63,7 +63,7 @@ pub fn process_undelegate_stake(
 
     // stake to ore program
     solana_program::program::invoke_signed(
-        &ore_api::instruction::claim(
+        &ore_api::prelude::claim(
             *managed_proof_account_info.key,
             *beneficiary_token_account_info.key,
             amount,

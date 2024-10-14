@@ -4,7 +4,6 @@ use ore_miner_delegation::{
     pda::{delegated_stake_pda, managed_proof_pda},
     utils::AccountDeserialize as _,
 };
-use ore_utils::AccountDeserialize as _;
 use solana_program::{clock::Clock, pubkey::Pubkey, rent::Rent, system_instruction};
 use solana_program_test::{processor, read_file, ProgramTest, ProgramTestContext};
 use solana_sdk::{
@@ -14,6 +13,7 @@ use solana_sdk::{
 use spl_associated_token_account::{
     get_associated_token_address, instruction::create_associated_token_account,
 };
+use steel::AccountDeserialize as _;
 
 #[tokio::test]
 async fn test_register_proof() {
@@ -286,10 +286,10 @@ pub async fn test_mine() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
     let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
-    let ix0 = ore_api::instruction::reset(context.payer.pubkey());
+    let ix0 = ore_api::prelude::reset(context.payer.pubkey());
 
     // Set ix1 to be the proof declaration authentication
-    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
 
     let ix =
         ore_miner_delegation::instruction::mine(context.payer.pubkey(), BUS_ADDRESSES[0], solution);
@@ -433,10 +433,10 @@ pub async fn test_claim() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
     let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
-    let ix0 = ore_api::instruction::reset(context.payer.pubkey());
+    let ix0 = ore_api::prelude::reset(context.payer.pubkey());
 
     // Set ix1 to be the proof declaration authentication
-    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
 
     let ix =
         ore_miner_delegation::instruction::mine(context.payer.pubkey(), BUS_ADDRESSES[0], solution);
@@ -661,10 +661,10 @@ pub async fn test_stake() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
     let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
-    let ix0 = ore_api::instruction::reset(miner.pubkey());
+    let ix0 = ore_api::prelude::reset(miner.pubkey());
 
     // Set ix1 to be the proof declaration authentication
-    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
 
     let ix = ore_miner_delegation::instruction::mine(miner.pubkey(), BUS_ADDRESSES[0], solution);
 
@@ -967,10 +967,10 @@ pub async fn test_unstake() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
     let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
-    let ix0 = ore_api::instruction::reset(miner.pubkey());
+    let ix0 = ore_api::prelude::reset(miner.pubkey());
 
     // Set ix1 to be the proof declaration authentication
-    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
 
     let ix = ore_miner_delegation::instruction::mine(miner.pubkey(), BUS_ADDRESSES[0], solution);
 
@@ -1400,10 +1400,10 @@ pub async fn test_unstake_faker() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
     let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
-    let ix0 = ore_api::instruction::reset(miner.pubkey());
+    let ix0 = ore_api::prelude::reset(miner.pubkey());
 
     // Set ix1 to be the proof declaration authentication
-    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
 
     let ix = ore_miner_delegation::instruction::mine(miner.pubkey(), BUS_ADDRESSES[0], solution);
 
@@ -1736,10 +1736,10 @@ pub async fn test_stake_window() {
     let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
 
     let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
-    let ix0 = ore_api::instruction::reset(miner.pubkey());
+    let ix0 = ore_api::prelude::reset(miner.pubkey());
 
     // Set ix1 to be the proof declaration authentication
-    let proof_declaration = ore_api::instruction::auth(ore_proof_account.0);
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
 
     let ix = ore_miner_delegation::instruction::mine(miner.pubkey(), BUS_ADDRESSES[0], solution);
 
@@ -1978,15 +1978,29 @@ pub async fn init_program() -> ProgramTestContext {
         },
     );
 
+    // Add Ore-Boost Program account
+    let data = read_file(&"tests/buffers/ore_boost.so");
+    program_test.add_account(
+        ore_boost_api::id(),
+        Account {
+            lamports: Rent::default().minimum_balance(data.len()).max(1),
+            data,
+            owner: solana_sdk::bpf_loader::id(),
+            executable: true,
+            rent_epoch: 0,
+        },
+    );
+
     let mut context = program_test.start_with_context().await;
 
     // Initialize Ore Program
     // TODO: initialize can only be called by the AUTHORIZED_INITIALIZER.
     // Will need to create the necessary accounts directly instead of using
     // the initialize instruction.
-    let ix = ore_api::instruction::initialize(context.payer.pubkey());
+    let ix = ore_api::prelude::initialize(context.payer.pubkey());
+    let ix2 = ore_boost_api::prelude::initialize(context.payer.pubkey());
     let tx = Transaction::new_signed_with_payer(
-        &[ix],
+        &[ix, ix2],
         Some(&context.payer.pubkey()),
         &[&context.payer],
         context.last_blockhash,

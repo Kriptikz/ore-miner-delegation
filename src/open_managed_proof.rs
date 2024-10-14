@@ -47,7 +47,7 @@ pub fn process_open_managed_proof(
 
     // CPI to create the proof account
     solana_program::program::invoke_signed(
-        &ore_api::instruction::open(
+        &ore_api::prelude::open(
             managed_proof_account_pda.0,
             managed_proof_account_pda.0,
             *miner.key,

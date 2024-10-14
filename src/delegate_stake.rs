@@ -1,4 +1,4 @@
-use ore_utils::transfer;
+use steel::transfer;
 use solana_program::{
     account_info::AccountInfo, clock::Clock, program_error::ProgramError, sysvar::Sysvar,
 };
@@ -74,7 +74,7 @@ pub fn process_delegate_stake(
 
     // stake to ore program
     solana_program::program::invoke_signed(
-        &ore_api::instruction::stake(
+        &ore_api::prelude::stake(
             *managed_proof_account_info.key,
             *managed_proof_account_token_account_info.key,
             amount,
