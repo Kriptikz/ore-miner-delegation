@@ -22,6 +22,7 @@ pub enum Instructions {
     Mine,
     DelegateStake,
     UndelegateStake,
+    OpenManagedProofBoost,
 }
 
 impl Into<Vec<u8>> for Instructions {
@@ -204,5 +205,27 @@ pub fn undelegate_stake(
             .to_vec(),
         ]
         .concat(),
+    }
+}
+
+pub fn open_managed_proof_boost(miner: Pubkey, mint: Pubkey) -> Instruction {
+    let managed_proof_address = managed_proof_pda(miner);
+    let (boost_pda, _) = ore_boost_api::state::boost_pda(mint);
+    let (stake_pda, _) = ore_boost_api::state::stake_pda(managed_proof_address.0, boost_pda);
+
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(miner, true),
+            AccountMeta::new(managed_proof_address.0, false),
+            AccountMeta::new_readonly(boost_pda, false),
+            AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(stake_pda, false),
+            AccountMeta::new_readonly(system_program::ID, false),
+            AccountMeta::new_readonly(ore_boost_api::id(), false),
+
+        ],
+        data: Instructions::OpenManagedProofBoost.into(),
     }
 }

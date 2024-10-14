@@ -16,6 +16,7 @@ pub mod pda;
 pub mod state;
 pub mod undelegate_stake;
 pub mod utils;
+pub mod open_managed_proof_boost;
 
 declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 
@@ -53,6 +54,9 @@ pub fn process_instruction(
         }
         Instructions::UndelegateStake => {
             undelegate_stake::process_undelegate_stake(accounts, data)?;
+        }
+        Instructions::OpenManagedProofBoost => {
+            open_managed_proof_boost::process_open_managed_proof_boost(accounts, data)?;
         }
     }
 
