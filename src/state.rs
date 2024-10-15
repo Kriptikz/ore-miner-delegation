@@ -43,3 +43,23 @@ impl Discriminator for DelegatedStake {
 impl_to_bytes!(DelegatedStake);
 impl_account_from_bytes!(DelegatedStake);
 impl_account_from_account_info!(DelegatedStake);
+
+// DelegatedBoost
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct DelegatedBoost {
+    pub bump: u8,
+    _pad: [u8; 7],
+    pub managed_proof_pubkey: Pubkey,
+    pub amount: u64,
+}
+
+impl Discriminator for DelegatedBoost {
+    fn discriminator() -> AccountDiscriminator {
+        AccountDiscriminator::DelegatedBoost
+    }
+}
+
+impl_to_bytes!(DelegatedBoost);
+impl_account_from_bytes!(DelegatedBoost);
+impl_account_from_account_info!(DelegatedBoost);

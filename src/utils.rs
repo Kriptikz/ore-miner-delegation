@@ -6,6 +6,7 @@ use solana_program::program_error::ProgramError;
 pub enum AccountDiscriminator {
     ManagedProof = 100,
     DelegatedStake = 101,
+    DelegatedBoost = 102,
 }
 
 pub trait Discriminator {

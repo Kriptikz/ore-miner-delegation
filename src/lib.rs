@@ -1,4 +1,4 @@
-use instruction::Instructions;
+use instruction::{init_delegate_boost, undelegate_boost, Instructions};
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey,
@@ -17,6 +17,9 @@ pub mod state;
 pub mod undelegate_stake;
 pub mod utils;
 pub mod open_managed_proof_boost;
+pub mod delegate_boost;
+pub mod undelegate_boost;
+pub mod init_delegate_boost;
 
 declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 
@@ -57,6 +60,15 @@ pub fn process_instruction(
         }
         Instructions::OpenManagedProofBoost => {
             open_managed_proof_boost::process_open_managed_proof_boost(accounts, data)?;
+        }
+        Instructions::InitDelegateBoost => {
+            init_delegate_boost::process_init_delegate_boost(accounts, data)?;
+        }
+        Instructions::DelegateBoost => {
+            delegate_boost::process_delegate_boost(accounts, data)?;
+        }
+        Instructions::UndelegateBoost => {
+            undelegate_boost::process_undelegate_boost(accounts, data)?;
         }
     }
 

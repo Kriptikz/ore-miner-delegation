@@ -25,8 +25,6 @@ pub fn process_open_managed_proof_boost(
         &crate::id(),
     );
 
-    sol_log("WTF");
-
     // CPI to create the proof account
     solana_program::program::invoke_signed(
         &ore_boost_api::sdk::open(
