@@ -104,6 +104,8 @@ pub fn process_delegate_stake(
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
     Ok(())
 }

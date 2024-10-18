@@ -105,6 +105,8 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
 
     Ok(())

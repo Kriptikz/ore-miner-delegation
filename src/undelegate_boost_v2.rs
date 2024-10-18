@@ -74,6 +74,8 @@ pub fn process_undelegate_boost_v2(
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
 
     // withdraw from boost program 

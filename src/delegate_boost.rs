@@ -119,6 +119,8 @@ pub fn process_delegate_boost(
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
 
     Ok(())

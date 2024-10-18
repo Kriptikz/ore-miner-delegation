@@ -103,6 +103,8 @@ pub fn process_init_delegate_stake(
         let delegated_stake = crate::state::DelegatedStake::try_from_bytes_mut(&mut data)?;
         delegated_stake.bump = delegated_stake_pda.1;
         delegated_stake.amount = 0;
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
 
     Ok(())

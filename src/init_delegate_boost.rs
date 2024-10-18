@@ -107,6 +107,8 @@ pub fn process_init_delegate_boost(
         delegated_boost.bump = delegated_boost_pda.1;
         delegated_boost.managed_proof_pubkey = *managed_proof_account_info.key;
         delegated_boost.amount = 0;
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
 
     Ok(())

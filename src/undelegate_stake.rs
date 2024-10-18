@@ -59,6 +59,8 @@ pub fn process_undelegate_stake(
         } else {
             return Err(ProgramError::ArithmeticOverflow);
         }
+    } else {
+        return Err(ProgramError::AccountBorrowFailed);
     }
 
     // stake to ore program
