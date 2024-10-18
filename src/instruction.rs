@@ -507,3 +507,22 @@ pub fn undelegate_boost_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey, amount: 
     }
 }
 
+pub fn migrate_boost_to_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey) -> Instruction {
+    let managed_proof_address = managed_proof_pda(miner);
+    let delegated_boost_address = delegated_boost_pda(miner, staker, mint);
+    let delegated_boost_address_v2 = delegated_boost_v2_pda(miner, staker, mint);
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(staker, true),
+            AccountMeta::new_readonly(miner, false),
+            AccountMeta::new(managed_proof_address.0, false),
+            AccountMeta::new(delegated_boost_address.0, false),
+            AccountMeta::new(delegated_boost_address_v2.0, false),
+            AccountMeta::new_readonly(mint, false),
+        ],
+        data: Instructions::MigrateDelegateBoostToV2.to_vec(),
+    }
+}
+
