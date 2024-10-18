@@ -63,3 +63,24 @@ impl Discriminator for DelegatedBoost {
 impl_to_bytes!(DelegatedBoost);
 impl_account_from_bytes!(DelegatedBoost);
 impl_account_from_account_info!(DelegatedBoost);
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct DelegatedBoostV2 {
+    pub bump: u8,
+    _pad: [u8; 7],
+    pub managed_proof_pubkey: Pubkey,
+    pub authority: Pubkey,
+    pub mint: Pubkey,
+    pub amount: u64,
+}
+
+impl Discriminator for DelegatedBoostV2 {
+    fn discriminator() -> AccountDiscriminator {
+        AccountDiscriminator::DelegatedBoostV2
+    }
+}
+
+impl_to_bytes!(DelegatedBoostV2);
+impl_account_from_bytes!(DelegatedBoostV2);
+impl_account_from_account_info!(DelegatedBoostV2);

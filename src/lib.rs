@@ -20,6 +20,10 @@ pub mod open_managed_proof_boost;
 pub mod delegate_boost;
 pub mod undelegate_boost;
 pub mod init_delegate_boost;
+pub mod init_delegate_boost_v2;
+pub mod delegate_boost_v2;
+pub mod undelegate_boost_v2;
+pub mod migrate_delegate_boost_to_v2;
 
 declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 
@@ -69,6 +73,18 @@ pub fn process_instruction(
         }
         Instructions::UndelegateBoost => {
             undelegate_boost::process_undelegate_boost(accounts, data)?;
+        }
+        Instructions::InitDelegateBoostV2 => {
+            init_delegate_boost_v2::process_init_delegate_boost_v2(accounts, data)?;
+        }
+        Instructions::DelegateBoostV2 => {
+            delegate_boost_v2::process_delegate_boost_v2(accounts, data)?;
+        }
+        Instructions::UndelegateBoostV2 => {
+            undelegate_boost_v2::process_undelegate_boost_v2(accounts, data)?;
+        }
+        Instructions::MigrateDelegateBoostToV2 => {
+            migrate_delegate_boost_to_v2::process_migrate_delegate_boost_v2(accounts, data)?;
         }
     }
 

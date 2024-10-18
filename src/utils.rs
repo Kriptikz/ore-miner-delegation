@@ -7,6 +7,7 @@ pub enum AccountDiscriminator {
     ManagedProof = 100,
     DelegatedStake = 101,
     DelegatedBoost = 102,
+    DelegatedBoostV2 = 103,
 }
 
 pub trait Discriminator {
