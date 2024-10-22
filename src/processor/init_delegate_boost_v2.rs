@@ -109,6 +109,7 @@ pub fn process_init_delegate_boost_v2(
         delegated_boost.mint = *token_mint_account_info.key;
         delegated_boost.authority = *staker.key;
         delegated_boost.amount = 0;
+        delegated_boost.fee_payer = *payer.key;
     } else {
         return Err(ProgramError::AccountBorrowFailed);
     }

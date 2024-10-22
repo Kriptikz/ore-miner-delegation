@@ -73,6 +73,7 @@ pub struct DelegatedBoostV2 {
     pub authority: Pubkey,
     pub mint: Pubkey,
     pub amount: u64,
+    pub fee_payer: Pubkey,
 }
 
 impl Discriminator for DelegatedBoostV2 {
