@@ -6,6 +6,10 @@ use thiserror::Error;
 pub enum OreDelegationError {
     #[error("Stake delegation window is currently closed")]
     StakeWindowClosed,
+    #[error("Cannot close account with balance")]
+    CannotCloseAccountWithBalance,
+    #[error("Init account fee payer must match provided payer")]
+    CloseAccountFeePayerMissmatch,
 }
 
 impl From<OreDelegationError> for solana_program::program_error::ProgramError {

@@ -115,7 +115,7 @@ pub fn load_delegated_boost_v2<'a, 'info>(
     managed_proof: &Pubkey,
     mint: &Pubkey,
     is_writable: bool,
-) -> Result<(), ProgramError> {
+) -> Result<DelegatedBoostV2, ProgramError> {
     if info.owner.ne(&crate::id()) {
         return Err(ProgramError::InvalidAccountOwner);
     }
@@ -146,7 +146,7 @@ pub fn load_delegated_boost_v2<'a, 'info>(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Ok(())
+    Ok(*delegated_boost)
 }
 
 pub fn load_program<'a, 'info>(

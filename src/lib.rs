@@ -75,6 +75,9 @@ pub fn process_instruction(
         Instructions::MigrateDelegateBoostToV2 => {
             processor::migrate_delegate_boost_to_v2::process_migrate_delegate_boost_v2(accounts, data)?;
         }
+        Instructions::CloseDelegateBoostV2 => {
+            processor::close_delegate_boost_v2::process_close_delegate_boost_v2(accounts, data)?;
+        }
     }
 
     Ok(())

@@ -11,3 +11,4 @@ pub mod open_managed_proof_boost;
 pub mod undelegate_boost;
 pub mod undelegate_boost_v2;
 pub mod undelegate_stake;
+pub mod close_delegate_boost_v2;

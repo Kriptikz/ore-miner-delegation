@@ -31,6 +31,7 @@ pub enum Instructions {
     UndelegateBoostV2,
     InitDelegateBoostV2,
     MigrateDelegateBoostToV2,
+    CloseDelegateBoostV2,
 }
 
 impl Into<Vec<u8>> for Instructions {
@@ -523,6 +524,25 @@ pub fn migrate_boost_to_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey) -> Instr
             AccountMeta::new_readonly(mint, false),
         ],
         data: Instructions::MigrateDelegateBoostToV2.to_vec(),
+    }
+}
+
+pub fn close_delegate_boost_v2(staker: Pubkey, miner: Pubkey, payer: Pubkey, mint: Pubkey) -> Instruction {
+    let managed_proof_address = managed_proof_pda(miner);
+    let delegated_boost_address = delegated_boost_v2_pda(miner, staker, mint);
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(staker, false),
+            AccountMeta::new(miner, false),
+            AccountMeta::new(payer, false),
+            AccountMeta::new(managed_proof_address.0, false),
+            AccountMeta::new(delegated_boost_address.0, false),
+            AccountMeta::new_readonly(mint, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+        data: Instructions::CloseDelegateBoostV2.into(),
     }
 }
 
