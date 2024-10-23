@@ -1,5 +1,5 @@
 use solana_program::{
-    account_info::AccountInfo, log::sol_log, program_error::ProgramError, pubkey::Pubkey, system_program
+    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program
 };
 
 pub fn process_open_managed_proof_boost(

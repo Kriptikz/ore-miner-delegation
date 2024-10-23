@@ -1,5 +1,3 @@
-use std::mem::size_of;
-
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError
 };

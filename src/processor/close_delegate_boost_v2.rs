@@ -1,12 +1,10 @@
-use std::mem::size_of;
-
 use solana_program::{
-    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    system_program, sysvar::Sysvar,
+    account_info::AccountInfo, program_error::ProgramError,
+    system_program,
 };
 
 use crate::{
-    error::OreDelegationError, loaders::{load_delegated_boost_v2, load_managed_proof}, state::DelegatedBoostV2, utils::{AccountDeserialize, Discriminator}
+    error::OreDelegationError, loaders::{load_delegated_boost_v2, load_managed_proof}
 };
 
 pub fn process_close_delegate_boost_v2(

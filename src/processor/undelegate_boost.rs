@@ -1,9 +1,9 @@
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
-use steel::{transfer, transfer_signed};
+use steel::transfer_signed;
 
 use crate::{
-    instruction::{DelegateStakeArgs, UndelegateBoostArgs},
-    loaders::{load_delegated_boost, load_delegated_stake, load_managed_proof},
+    instruction::UndelegateBoostArgs,
+    loaders::{load_delegated_boost, load_managed_proof},
     state::ManagedProof,
     utils::AccountDeserialize,
 };

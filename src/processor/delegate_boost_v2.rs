@@ -6,7 +6,7 @@ use solana_program::{
 use crate::{
     error::OreDelegationError,
     instruction::DelegateBoostArgs,
-    loaders::{load_delegated_boost, load_delegated_boost_v2, load_managed_proof},
+    loaders::{load_delegated_boost_v2, load_managed_proof},
     state::ManagedProof,
     utils::AccountDeserialize,
 };
