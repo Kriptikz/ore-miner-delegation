@@ -38,9 +38,9 @@ pub fn process_delegate_boost_v2(
 
     let current_timestamp = clock.unix_timestamp;
 
-    if let Some(secs_passed_hour) = current_timestamp.checked_rem(3600) {
+    if let Some(secs_passed_window) = current_timestamp.checked_rem(600) {
         // passed 5 mins
-        if secs_passed_hour > 300 {
+        if secs_passed_window > 300 {
             return Err(OreDelegationError::StakeWindowClosed.into());
         }
     } else {
