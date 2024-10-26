@@ -2636,7 +2636,7 @@ dependencies = [
 
 [[package]]
 name = "ore-miner-delegation"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "bytemuck",
  "drillx",
@@ -2657,9 +2657,9 @@ dependencies = [
 
 [[package]]
 name = "ore-utils"
-version = "2.1.9"
+version = "2.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2d6933b14c84fb91ad7ab2e8fccff589884a81507c1a198dea4f03f3180ef4"
+checksum = "6c92cb0b8a4c9583113b78c87a5372d71825ec3432402cb843e1ffc6af9f6b7d"
 dependencies = [
  "bytemuck",
  "solana-program",

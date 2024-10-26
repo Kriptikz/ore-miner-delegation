@@ -1,6 +1,6 @@
 [package]
 name = "ore-miner-delegation"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 description = "Ore miner delegate for delegate staking."
 license = "Apache-2.0"
@@ -21,9 +21,9 @@ num_enum = "0.7.2"
 solana-program = "1.18.14"
 spl-associated-token-account = { version = "3.0.2", features = ["no-entrypoint"] }
 spl-token = { version = "=4.0.0", features = ["no-entrypoint"] }
-ore-boost-api = "0.2.0"
-ore-api = "2.2.0"
-ore-utils = "2.1.8"
+ore-boost-api = "=0.2.0"
+ore-api = "=2.2.0"
+ore-utils = "=2.1.8"
 drillx = "2.1.0"
 mpl-token-metadata = "4.1.2"
 thiserror = "1.0.57"
