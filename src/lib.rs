@@ -13,6 +13,7 @@ pub mod loaders;
 pub mod pda;
 pub mod state;
 pub mod utils;
+pub mod global_boost;
 
 declare_id!("J6XAzG8S5KmoBM8GcCFfF8NmtzD7U3QPnbhNiYwsu9we");
 
@@ -77,6 +78,12 @@ pub fn process_instruction(
         }
         Instructions::CloseDelegateBoostV2 => {
             processor::close_delegate_boost_v2::process_close_delegate_boost_v2(accounts, data)?;
+        }
+        Instructions::RegisterGlobalBoost => {
+            processor::register_global_boost::process_register_global_boost(accounts, data)?;
+        }
+        Instructions::RotateGlobalBoost => {
+            processor::rotate_global_boost::process_rotate_global_boost(accounts, data)?;
         }
     }
 

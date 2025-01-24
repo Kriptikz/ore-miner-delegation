@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use drillx::Solution;
 use num_enum::TryFromPrimitive;
-use ore_api::state::proof_pda;
+use ore_api::{consts::TREASURY_TOKENS_ADDRESS, state::proof_pda};
 use ore_boost_api::state::{boost_pda, stake_pda};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -11,8 +11,7 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
-    impl_instruction_from_bytes, impl_to_bytes,
-    pda::{delegated_boost_pda, delegated_boost_v2_pda, delegated_stake_pda, managed_proof_pda},
+    global_boost::{directory_pda, reservation_pda, GLOBAL_BOOST_ID}, impl_instruction_from_bytes, impl_to_bytes, pda::{delegated_boost_pda, delegated_boost_v2_pda, delegated_stake_pda, managed_proof_pda}
 };
 
 #[repr(u8)]
@@ -32,6 +31,8 @@ pub enum Instructions {
     InitDelegateBoostV2,
     MigrateDelegateBoostToV2,
     CloseDelegateBoostV2,
+    RegisterGlobalBoost,
+    RotateGlobalBoost,
 }
 
 impl Into<Vec<u8>> for Instructions {
@@ -543,6 +544,47 @@ pub fn close_delegate_boost_v2(staker: Pubkey, miner: Pubkey, payer: Pubkey, min
             AccountMeta::new_readonly(system_program::id(), false),
         ],
         data: Instructions::CloseDelegateBoostV2.into(),
+    }
+}
+
+pub fn register_global_boost(miner: Pubkey) -> Instruction {
+    let managed_proof_address = managed_proof_pda(miner);
+    let ore_proof_address = proof_pda(managed_proof_address.0);
+    let reservation = reservation_pda(managed_proof_address.0);
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(miner, true),
+            AccountMeta::new_readonly(ore_proof_address.0, false),
+            AccountMeta::new(managed_proof_address.0, false),
+            AccountMeta::new(reservation.0, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+            AccountMeta::new_readonly(GLOBAL_BOOST_ID, false),
+        ],
+        data: Instructions::RegisterGlobalBoost.into(),
+    }
+}
+
+pub fn rotate_global_boost(miner: Pubkey) -> Instruction {
+    let managed_proof_address = managed_proof_pda(miner);
+    let ore_proof_address = proof_pda(managed_proof_address.0);
+    let directory = directory_pda();
+    let reservation = reservation_pda(managed_proof_address.0);
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(miner, true),
+            AccountMeta::new_readonly(ore_proof_address.0, false),
+            AccountMeta::new(managed_proof_address.0, false),
+            AccountMeta::new_readonly(directory.0, false),
+            AccountMeta::new(reservation.0, false),
+            AccountMeta::new_readonly(TREASURY_TOKENS_ADDRESS, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+            AccountMeta::new_readonly(GLOBAL_BOOST_ID, false),
+        ],
+        data: Instructions::RotateGlobalBoost.into(),
     }
 }
 
