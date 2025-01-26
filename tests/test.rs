@@ -4764,6 +4764,185 @@ pub async fn test_register_reservation_and_rotate_for_global_boost() {
         .expect("process_transaction should be ok");
 }
 
+#[tokio::test]
+pub async fn test_update_miner_auth() {
+    let mut context = init_program().await;
+
+    let managed_proof_account = Pubkey::find_program_address(
+        &[
+            ore_miner_delegation::consts::MANAGED_PROOF,
+            context.payer.pubkey().as_ref(),
+        ],
+        &ore_miner_delegation::id(),
+    );
+    let delegated_stake_account = Pubkey::find_program_address(
+        &[
+            ore_miner_delegation::consts::DELEGATED_STAKE,
+            context.payer.pubkey().as_ref(),
+            managed_proof_account.0.as_ref(),
+        ],
+        &ore_miner_delegation::id(),
+    );
+    let ore_proof_account = Pubkey::find_program_address(
+        &[ore_api::consts::PROOF, managed_proof_account.0.as_ref()],
+        &ore_api::id(),
+    );
+
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix0 =
+        system_instruction::transfer(&context.payer.pubkey(), &managed_proof_account.0, 100000000);
+    let ix1 = ore_miner_delegation::instruction::open_managed_proof(context.payer.pubkey());
+
+    // send some sol to the pda to ensure the program will clear the balanace and then open the account
+    let ix2 = system_instruction::transfer(
+        &context.payer.pubkey(),
+        &delegated_stake_account.0,
+        100000000,
+    );
+    let ix_delegate_stake = ore_miner_delegation::instruction::init_delegate_stake(
+        context.payer.pubkey(),
+        context.payer.pubkey(),
+        context.payer.pubkey(),
+    );
+    let mut tx = Transaction::new_with_payer(
+        &[ix0, ix1, ix2, ix_delegate_stake],
+        Some(&context.payer.pubkey()),
+    );
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+    // Verify ore::Proof data
+    let ore_proof = context
+        .banks_client
+        .get_account(ore_proof_account.0)
+        .await
+        .unwrap()
+        .unwrap();
+    let ore_proof = ore_api::state::Proof::try_from_bytes(&ore_proof.data).unwrap();
+
+    let proof = ore_proof.clone();
+
+    let mut memory = equix::SolverMemory::new();
+
+    let mut nonce: u64 = 0;
+    let hash;
+
+    loop {
+        // Create hash
+        if let Ok(hx) =
+            drillx::hash_with_memory(&mut memory, &proof.challenge, &nonce.to_le_bytes())
+        {
+            let new_difficulty = hx.difficulty();
+            if new_difficulty.gt(&ore_api::consts::INITIAL_MIN_DIFFICULTY) {
+                hash = hx;
+                nonce = nonce;
+
+                break;
+            }
+        }
+
+        // Increment nonce
+        nonce += 1;
+    }
+
+    // Update clock to be 60 seconds after proof
+    let new_clock = solana_program::clock::Clock {
+        slot: 0,
+        epoch_start_timestamp: proof.last_hash_at + 60,
+        epoch: 140,
+        leader_schedule_epoch: 141,
+        unix_timestamp: proof.last_hash_at + 60,
+    };
+
+    context.set_sysvar::<Clock>(&new_clock);
+
+    // Submit solution
+    let solution = drillx::Solution::new(hash.d, nonce.to_le_bytes());
+
+    let cu_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(550000);
+    let ix0 = ore_api::prelude::reset(context.payer.pubkey());
+
+    // Set ix1 to be the proof declaration authentication
+    let proof_declaration = ore_api::prelude::auth(ore_proof_account.0);
+
+    let ix =
+        ore_miner_delegation::instruction::mine(context.payer.pubkey(), BUS_ADDRESSES[0], solution);
+
+    let mut tx = Transaction::new_with_payer(
+        &[cu_limit_ix, proof_declaration, ix0, ix],
+        Some(&context.payer.pubkey()),
+    );
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+    let ix =
+        ore_miner_delegation::instruction::register_global_boost(context.payer.pubkey());
+
+    let mut tx = Transaction::new_with_payer(
+        &[ix],
+        Some(&context.payer.pubkey()),
+    );
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+
+    let ix =
+        ore_miner_delegation::instruction::update_miner_authority(context.payer.pubkey(), context.payer.pubkey());
+
+    let mut tx = Transaction::new_with_payer(
+        &[ix],
+        Some(&context.payer.pubkey()),
+    );
+
+    let blockhash = context
+        .banks_client
+        .get_latest_blockhash()
+        .await
+        .expect("should get latest blockhash");
+
+    tx.sign(&[&context.payer], blockhash);
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("process_transaction should be ok");
+}
+
 pub async fn init_program() -> ProgramTestContext {
     let mut program_test = ProgramTest::new(
         "ore_miner_delegation",

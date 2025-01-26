@@ -85,6 +85,9 @@ pub fn process_instruction(
         Instructions::RotateGlobalBoost => {
             processor::rotate_global_boost::process_rotate_global_boost(accounts, data)?;
         }
+        Instructions::UpdateMiningAuthority => {
+            processor::update_miner_authority::process_update_miner_authority(accounts, data)?;
+        }
     }
 
     Ok(())

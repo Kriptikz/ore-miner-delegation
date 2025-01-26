@@ -14,3 +14,4 @@ pub mod undelegate_stake;
 pub mod close_delegate_boost_v2;
 pub mod register_global_boost;
 pub mod rotate_global_boost;
+pub mod update_miner_authority;

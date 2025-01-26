@@ -33,6 +33,7 @@ pub enum Instructions {
     CloseDelegateBoostV2,
     RegisterGlobalBoost,
     RotateGlobalBoost,
+    UpdateMiningAuthority,
 }
 
 impl Into<Vec<u8>> for Instructions {
@@ -584,6 +585,25 @@ pub fn rotate_global_boost(miner: Pubkey) -> Instruction {
             AccountMeta::new_readonly(GLOBAL_BOOST_ID, false),
         ],
         data: Instructions::RotateGlobalBoost.into(),
+    }
+}
+
+pub fn update_miner_authority(miner: Pubkey, new_miner_auth: Pubkey) -> Instruction {
+    let managed_proof_address = managed_proof_pda(miner);
+    let ore_proof_address = proof_pda(managed_proof_address.0);
+
+    let accounts = vec![
+        AccountMeta::new(miner, true),
+        AccountMeta::new(managed_proof_address.0, false),
+        AccountMeta::new(new_miner_auth, false),
+        AccountMeta::new(ore_proof_address.0, false),
+        AccountMeta::new_readonly(ore_api::id(), false),
+    ];
+
+    Instruction {
+        program_id: crate::id(),
+        accounts,
+        data: Instructions::UpdateMiningAuthority.into(),
     }
 }
 
