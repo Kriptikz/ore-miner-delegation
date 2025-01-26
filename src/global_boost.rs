@@ -1,6 +1,8 @@
-use ore_api::consts::TREASURY_TOKENS_ADDRESS;
+use ore_api::{consts::TREASURY_TOKENS_ADDRESS, state::proof_pda};
 use solana_program::pubkey;
 use steel::*;
+
+use crate::pda::managed_proof_pda;
 
 pub static GLOBAL_BOOST_ID: Pubkey = pubkey!("BoosTyJFPPtrqJTdi49nnztoEWDJXfDRhyb2fha6PPy");
 
@@ -51,11 +53,20 @@ impl BoostInstruction {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct Initialize {}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct Register {}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct Rotate {}
+
+instruction!(BoostInstruction, Initialize);
+instruction!(BoostInstruction, Register);
+instruction!(BoostInstruction, Rotate);
+
 
 
 /// Fetch the PDA of the boost account.
@@ -88,11 +99,28 @@ pub fn stake_pda(authority: Pubkey, boost: Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[STAKE, authority.as_ref(), boost.as_ref()], &GLOBAL_BOOST_ID)
 }
 
-// Build register instruction.
+// Build initialize instruction.
+pub fn initialize(signer: Pubkey) -> Instruction {
+    let config_pda = config_pda();
+    let directory_pda = directory_pda();
+    Instruction {
+        program_id: GLOBAL_BOOST_ID,
+        accounts: vec![
+            AccountMeta::new(signer, true),
+            AccountMeta::new(config_pda.0, false),
+            AccountMeta::new(directory_pda.0, false),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data: Initialize {}
+        .to_bytes(),
+    }
+}
+
+// Build register instruction for CPI.
 pub fn register(signer: Pubkey, payer: Pubkey, proof: Pubkey) -> Instruction {
     let reservation_pda = reservation_pda(proof);
     Instruction {
-        program_id: crate::ID,
+        program_id: GLOBAL_BOOST_ID,
         accounts: vec![
             AccountMeta::new(signer, true),
             AccountMeta::new(payer, true),
@@ -104,12 +132,12 @@ pub fn register(signer: Pubkey, payer: Pubkey, proof: Pubkey) -> Instruction {
     }
 }
 
-// Build rotate instruction.
+// Build rotate instruction for CPI .
 pub fn rotate(signer: Pubkey, proof: Pubkey) -> Instruction {
     let directory_pda = directory_pda();
     let reservation_pda = reservation_pda(proof);
     Instruction {
-        program_id: crate::ID,
+        program_id: GLOBAL_BOOST_ID,
         accounts: vec![
             AccountMeta::new(signer, true),
             AccountMeta::new_readonly(directory_pda.0, false),
@@ -120,7 +148,4 @@ pub fn rotate(signer: Pubkey, proof: Pubkey) -> Instruction {
         data: Rotate {}.to_bytes(),
     }
 }
-
-instruction!(BoostInstruction, Register);
-instruction!(BoostInstruction, Rotate);
 

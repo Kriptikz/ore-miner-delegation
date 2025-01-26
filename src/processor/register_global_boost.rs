@@ -34,7 +34,6 @@ pub fn process_register_global_boost(
     if *ore_global_boost_program.key != crate::global_boost::GLOBAL_BOOST_ID {
         return Err(ProgramError::IncorrectProgramId);
     }
-
     // CPI to register the proof account
     solana_program::program::invoke_signed(
         &register(

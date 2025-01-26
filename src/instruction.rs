@@ -570,7 +570,7 @@ pub fn rotate_global_boost(miner: Pubkey) -> Instruction {
     let managed_proof_address = managed_proof_pda(miner);
     let ore_proof_address = proof_pda(managed_proof_address.0);
     let directory = directory_pda();
-    let reservation = reservation_pda(managed_proof_address.0);
+    let reservation = reservation_pda(ore_proof_address.0);
 
     Instruction {
         program_id: crate::id(),
@@ -581,7 +581,6 @@ pub fn rotate_global_boost(miner: Pubkey) -> Instruction {
             AccountMeta::new_readonly(directory.0, false),
             AccountMeta::new(reservation.0, false),
             AccountMeta::new_readonly(TREASURY_TOKENS_ADDRESS, false),
-            AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new_readonly(GLOBAL_BOOST_ID, false),
         ],
         data: Instructions::RotateGlobalBoost.into(),
