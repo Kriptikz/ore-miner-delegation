@@ -150,7 +150,7 @@ pub fn mine_with_boost(miner: Pubkey, bus: Pubkey, solution: Solution, boost_acc
 
     let boost_accounts = boost_accounts
         .into_iter()
-        .map(|pk| AccountMeta::new_readonly(pk, false))
+        .map(|pk| AccountMeta::new(pk, false))
         .collect();
     let accounts = [accounts, boost_accounts].concat();
 
