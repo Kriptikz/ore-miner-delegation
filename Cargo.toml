@@ -1,6 +1,6 @@
 [package]
 name = "ore-miner-delegation"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 description = "Ore miner delegate for delegate staking."
 license = "Apache-2.0"
