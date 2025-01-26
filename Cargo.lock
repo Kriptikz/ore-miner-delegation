@@ -2636,7 +2636,7 @@ dependencies = [
 
 [[package]]
 name = "ore-miner-delegation"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "bytemuck",
  "drillx",
