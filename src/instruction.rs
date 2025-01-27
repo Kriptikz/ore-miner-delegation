@@ -130,12 +130,12 @@ pub fn mine(miner: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
     }
 }
 
-pub fn mine_with_boost(miner: Pubkey, bus: Pubkey, solution: Solution, boost_accounts: Vec<Pubkey>) -> Instruction {
+pub fn mine_with_boost(miner: Pubkey, bus: Pubkey, solution: Solution, boost_accounts: Option<[Pubkey; 3]>) -> Instruction {
     let managed_proof_address = managed_proof_pda(miner);
     let ore_proof_address = proof_pda(managed_proof_address.0);
     let delegated_stake_address = delegated_stake_pda(miner, miner);
 
-    let accounts = vec![
+    let mut accounts = vec![
         AccountMeta::new(miner, true),
         AccountMeta::new(managed_proof_address.0, false),
         AccountMeta::new(bus, false),
@@ -148,12 +148,11 @@ pub fn mine_with_boost(miner: Pubkey, bus: Pubkey, solution: Solution, boost_acc
         AccountMeta::new_readonly(system_program::id(), false),
     ];
 
-    let boost_accounts = boost_accounts
-        .into_iter()
-        .map(|pk| AccountMeta::new(pk, false))
-        .collect();
-    let accounts = [accounts, boost_accounts].concat();
-
+    if let Some(boost_accounts) = boost_accounts {
+        accounts.push(AccountMeta::new_readonly(boost_accounts[0], false));
+        accounts.push(AccountMeta::new(boost_accounts[1], false));
+        accounts.push(AccountMeta::new_readonly(boost_accounts[2], false));
+    }
 
     Instruction {
         program_id: crate::id(),
