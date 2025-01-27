@@ -2,7 +2,7 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError, pub
 
 use crate::{
     state::{DelegatedBoost, DelegatedBoostV2, DelegatedStake, ManagedProof},
-    utils::AccountDeserialize,
+    utils::AccountDeserializeV1,
 };
 
 pub fn load_managed_proof<'a, 'info>(

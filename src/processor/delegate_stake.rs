@@ -8,7 +8,7 @@ use crate::{
     instruction::UndelegateStakeArgs,
     loaders::{load_delegated_stake, load_managed_proof},
     state::ManagedProof,
-    utils::AccountDeserialize,
+    utils::AccountDeserializeV1,
 };
 
 pub fn process_delegate_stake(

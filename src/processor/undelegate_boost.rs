@@ -1,11 +1,11 @@
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
-use steel::transfer_signed;
+use steel::{transfer_signed, transfer_signed_with_bump};
 
 use crate::{
     instruction::UndelegateBoostArgs,
     loaders::{load_delegated_boost, load_managed_proof},
     state::ManagedProof,
-    utils::AccountDeserialize,
+    utils::AccountDeserializeV1,
 };
 
 pub fn process_undelegate_boost(
@@ -102,18 +102,24 @@ pub fn process_undelegate_boost(
         ]],
     )?;
 
+    let bump = managed_proof.bump;
+    let seeds: Vec<&[u8]> = vec![
+        crate::consts::MANAGED_PROOF,
+        miner.key.as_ref(),
+    ];
+
+    let seeds: &[&[u8]] = &seeds;
+
+
     // transfer to stakers token account
-    transfer_signed(
+    transfer_signed_with_bump(
         managed_proof_account_info,
         managed_proof_account_token_account_info,
         staker_token_account_info,
         token_program,
         amount,
-        &[&[
-            crate::consts::MANAGED_PROOF,
-            miner.key.as_ref(),
-            &[managed_proof.bump],
-        ]],
+        seeds,
+        bump
     )?;
 
     Ok(())

@@ -1,11 +1,11 @@
-use steel::AccountDeserialize as _;
+use steel::AccountDeserialize;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, system_program};
 
 use crate::{
     instruction::MineArgs,
     loaders::{load_delegated_stake, load_managed_proof},
     state::ManagedProof,
-    utils::AccountDeserialize,
+    utils::AccountDeserializeV1,
 };
 
 pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result<(), ProgramError> {
@@ -51,8 +51,8 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
         ManagedProof::try_from_bytes(&data)?.clone()
     };
 
-    let mine_accounts = 
-        &[
+    let mut mine_accounts = 
+        vec![
             managed_proof_account_info.clone(),
             ore_proof_account_info.clone(),
             slothashes_sysvar.clone(),
@@ -65,15 +65,19 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
 
     // CPI to submit the solution
     let solution = drillx::Solution::new(args.digest, args.nonce);
-    let mine_accounts = [mine_accounts, optional_accounts].concat();
-    let optional_accounts = optional_accounts.iter().map(|a| *a.key).collect();
+
+    let mut boost_keys = None;
+    if let [boost_info, _boost_proof_info, reservation_info] = optional_accounts {
+        boost_keys = Some((*boost_info.key, *reservation_info.key));
+        mine_accounts = [mine_accounts, optional_accounts.to_vec()].concat();
+    }
     solana_program::program::invoke_signed(
-        &ore_api::prelude::mine(
+        &ore_api::sdk::mine(
             *managed_proof_account_info.key,
             *managed_proof_account_info.key,
             *ore_bus_account_info.key,
             solution,
-            optional_accounts
+            boost_keys
         ),
         &mine_accounts,
         &[&[

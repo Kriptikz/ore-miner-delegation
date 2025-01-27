@@ -8,7 +8,7 @@ use crate::{
     instruction::DelegateBoostArgs,
     loaders::{load_delegated_boost_v2, load_managed_proof},
     state::ManagedProof,
-    utils::AccountDeserialize,
+    utils::AccountDeserializeV1,
 };
 
 pub fn process_delegate_boost_v2(

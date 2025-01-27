@@ -4,7 +4,7 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError, sys
 use crate::{
     loaders::{load_delegated_stake, load_managed_proof},
     state::ManagedProof,
-    utils::AccountDeserialize,
+    utils::AccountDeserializeV1,
 };
 
 pub fn process_update_miner_authority(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result<(), ProgramError> {

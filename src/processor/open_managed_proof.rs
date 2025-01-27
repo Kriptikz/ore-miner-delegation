@@ -7,7 +7,7 @@ use solana_program::{
 
 use crate::{
     state::ManagedProof,
-    utils::{AccountDeserialize, Discriminator},
+    utils::{AccountDeserializeV1, Discriminator},
 };
 
 pub fn process_open_managed_proof(

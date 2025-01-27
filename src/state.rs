@@ -3,7 +3,7 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError, pub
 
 use crate::{
     impl_account_from_account_info, impl_account_from_bytes, impl_to_bytes,
-    utils::{AccountDeserialize, AccountDiscriminator, Discriminator},
+    utils::{AccountDeserializeV1, AccountDiscriminator, Discriminator},
 };
 
 // ManagedProof

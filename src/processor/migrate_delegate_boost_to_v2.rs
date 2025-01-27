@@ -3,7 +3,7 @@ use solana_program::{
 };
 
 use crate::{
-    loaders::{load_delegated_boost, load_delegated_boost_v2, load_managed_proof}, utils::AccountDeserialize
+    loaders::{load_delegated_boost, load_delegated_boost_v2, load_managed_proof}, utils::AccountDeserializeV1
 };
 
 pub fn process_migrate_delegate_boost_v2(

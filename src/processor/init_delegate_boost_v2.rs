@@ -8,7 +8,7 @@ use solana_program::{
 use crate::{
     loaders::load_managed_proof,
     state::DelegatedBoostV2,
-    utils::{AccountDeserialize, Discriminator},
+    utils::{AccountDeserializeV1, Discriminator},
 };
 
 pub fn process_init_delegate_boost_v2(

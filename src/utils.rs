@@ -14,7 +14,7 @@ pub trait Discriminator {
     fn discriminator() -> AccountDiscriminator;
 }
 
-pub trait AccountDeserialize {
+pub trait AccountDeserializeV1 {
     fn try_from_bytes(data: &[u8]) -> Result<&Self, ProgramError>;
     fn try_from_bytes_mut(data: &mut [u8]) -> Result<&mut Self, ProgramError>;
 }
@@ -33,7 +33,7 @@ macro_rules! impl_to_bytes {
 #[macro_export]
 macro_rules! impl_account_from_bytes {
     ($struct_name:ident) => {
-        impl crate::utils::AccountDeserialize for $struct_name {
+        impl crate::utils::AccountDeserializeV1 for $struct_name {
             fn try_from_bytes(
                 data: &[u8],
             ) -> Result<&Self, solana_program::program_error::ProgramError> {

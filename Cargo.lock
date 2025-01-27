@@ -2598,9 +2598,9 @@ dependencies = [
 
 [[package]]
 name = "ore-api"
-version = "2.2.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95419f2a52567607388137876912dc97f7eef964b3c556131987bf01ef925d9c"
+checksum = "5fe81730f32cc3e75a1dda6ed6aa824d6bab2622867a135d4173851fda40f14a"
 dependencies = [
  "array-const-fn-init",
  "bytemuck",
@@ -2612,7 +2612,7 @@ dependencies = [
  "spl-associated-token-account 2.3.0",
  "spl-token",
  "static_assertions",
- "steel",
+ "steel 2.1.1",
  "thiserror",
 ]
 
@@ -2630,7 +2630,7 @@ dependencies = [
  "spl-associated-token-account 2.3.0",
  "spl-token",
  "static_assertions",
- "steel",
+ "steel 1.3.0",
  "thiserror",
 ]
 
@@ -2650,7 +2650,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account 3.0.4",
  "spl-token",
- "steel",
+ "steel 2.1.1",
  "thiserror",
  "tokio",
 ]
@@ -5230,6 +5230,20 @@ name = "steel"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d88c610ca9fd5e4e51bdb6e9964114133a42f006713fe38aff37266fac91e1be"
+dependencies = [
+ "bytemuck",
+ "num_enum 0.7.3",
+ "solana-program",
+ "spl-associated-token-account 2.3.0",
+ "spl-token",
+ "thiserror",
+]
+
+[[package]]
+name = "steel"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a2ca3cc310b7b71ce7944af64fb4fdaa5d0c2848ac79616d75e401913b6f781"
 dependencies = [
  "bytemuck",
  "num_enum 0.7.3",
