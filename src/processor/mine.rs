@@ -9,8 +9,8 @@ use crate::{
 };
 
 pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result<(), ProgramError> {
-    let (required_accounts, optional_accounts) = accounts.split_at(10);
-    let [miner, managed_proof_account_info, ore_bus_account_info, ore_config_account_info, ore_proof_account_info, delegated_stake_account_info, slothashes_sysvar, instructions_sysvar, ore_program, system_program] =
+    let (required_accounts, boost_accounts) = accounts.split_at(10);
+    let [miner, managed_proof_account_info, bus_info, config_info, ore_proof_account_info, delegated_stake_account_info, slot_hashes_sysvar, instructions_sysvar, ore_program, system_program] =
         required_accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -51,33 +51,33 @@ pub fn process_mine(accounts: &[AccountInfo], instruction_data: &[u8]) -> Result
         ManagedProof::try_from_bytes(&data)?.clone()
     };
 
-    let mut mine_accounts = 
-        vec![
-            managed_proof_account_info.clone(),
-            ore_proof_account_info.clone(),
-            slothashes_sysvar.clone(),
-            ore_bus_account_info.clone(),
-            ore_config_account_info.clone(),
-            instructions_sysvar.clone(),
-            ore_program.clone(),
-            system_program.clone(),
-        ];
-
     // CPI to submit the solution
     let solution = drillx::Solution::new(args.digest, args.nonce);
 
-    let mut boost_keys = None;
-    if let [boost_info, _boost_proof_info, reservation_info] = optional_accounts {
-        boost_keys = Some((*boost_info.key, *reservation_info.key));
-        mine_accounts = [mine_accounts, optional_accounts.to_vec()].concat();
-    }
+    let [boost_config_info, boost_proof_info] = boost_accounts else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    let mine_accounts = 
+        vec![
+            managed_proof_account_info.clone(),
+            bus_info.clone(),
+            config_info.clone(),
+            ore_proof_account_info.clone(),
+            instructions_sysvar.clone(),
+            slot_hashes_sysvar.clone(),
+            boost_config_info.clone(),
+            boost_proof_info.clone(),
+            ore_program.clone(),
+        ];
+
     solana_program::program::invoke_signed(
         &ore_api::sdk::mine(
             *managed_proof_account_info.key,
             *managed_proof_account_info.key,
-            *ore_bus_account_info.key,
+            *bus_info.key,
             solution,
-            boost_keys
+            *boost_config_info.key
         ),
         &mine_accounts,
         &[&[

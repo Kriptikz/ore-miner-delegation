@@ -96,10 +96,12 @@ pub struct MineArgs {
     pub nonce: [u8; 8],
 }
 
-pub fn mine(miner: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
+pub fn mine_with_boost(miner: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
     let managed_proof_address = managed_proof_pda(miner);
     let ore_proof_address = proof_pda(managed_proof_address.0);
     let delegated_stake_address = delegated_stake_pda(miner, miner);
+    let boost_config = ore_boost_api::state::config_pda();
+    let boost_proof = ore_api::state::proof_pda(boost_config.0);
 
     let accounts = vec![
         AccountMeta::new(miner, true),
@@ -112,47 +114,9 @@ pub fn mine(miner: Pubkey, bus: Pubkey, solution: Solution) -> Instruction {
         AccountMeta::new_readonly(sysvar::instructions::id(), false),
         AccountMeta::new_readonly(ore_api::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(boost_config.0, false),
+        AccountMeta::new(boost_proof.0, false)
     ];
-
-    Instruction {
-        program_id: crate::id(),
-        accounts,
-        data: [
-            Instructions::Mine.to_vec(),
-            MineArgs {
-                digest: solution.d,
-                nonce: solution.n,
-            }
-            .to_bytes()
-            .to_vec(),
-        ]
-        .concat(),
-    }
-}
-
-pub fn mine_with_boost(miner: Pubkey, bus: Pubkey, solution: Solution, boost_accounts: Option<[Pubkey; 3]>) -> Instruction {
-    let managed_proof_address = managed_proof_pda(miner);
-    let ore_proof_address = proof_pda(managed_proof_address.0);
-    let delegated_stake_address = delegated_stake_pda(miner, miner);
-
-    let mut accounts = vec![
-        AccountMeta::new(miner, true),
-        AccountMeta::new(managed_proof_address.0, false),
-        AccountMeta::new(bus, false),
-        AccountMeta::new_readonly(ore_api::consts::CONFIG_ADDRESS, false),
-        AccountMeta::new(ore_proof_address.0, false),
-        AccountMeta::new(delegated_stake_address.0, false),
-        AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
-        AccountMeta::new_readonly(sysvar::instructions::id(), false),
-        AccountMeta::new_readonly(ore_api::id(), false),
-        AccountMeta::new_readonly(system_program::id(), false),
-    ];
-
-    if let Some(boost_accounts) = boost_accounts {
-        accounts.push(AccountMeta::new_readonly(boost_accounts[0], false));
-        accounts.push(AccountMeta::new(boost_accounts[1], false));
-        accounts.push(AccountMeta::new_readonly(boost_accounts[2], false));
-    }
 
     Instruction {
         program_id: crate::id(),
