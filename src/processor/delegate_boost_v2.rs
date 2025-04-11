@@ -22,11 +22,18 @@ pub fn process_delegate_boost_v2(
         managed_proof_account_token_account_info,
         delegate_boost_account_info,
         boost_account_info,
+        boost_config_info,
+        deposits_info,
         token_mint_account_info,
+        config_proof_info,
+        rewards_info,
+        sender_info,
         staker_token_account_info,
-        boost_token_account_info,
         stake_account_info,
         ore_boost_program,
+        ore_treasury_info,
+        ore_treasury_tokens_info,
+        ore_program,
         token_program
     ] =
         accounts
@@ -93,14 +100,25 @@ pub fn process_delegate_boost_v2(
             *token_mint_account_info.key,
             amount,
         ),
+            // let [
+        // signer_info, boost_info, config_info, deposits_info, mint_info, proof_info,
+        // rewards_info, sender_info, stake_info, treasury_info, treasury_tokens_info,
+        // ore_program, token_program
+    // ] =
+
         &[
             managed_proof_account_info.clone(),
             boost_account_info.clone(),
-            boost_token_account_info.clone(),
+            boost_config_info.clone(),
+            deposits_info.clone(),
             token_mint_account_info.clone(),
-            managed_proof_account_token_account_info.clone(),
+            config_proof_info.clone(),
+            rewards_info.clone(),
+            sender_info.clone(),
             stake_account_info.clone(),
-            ore_boost_program.clone(),
+            ore_treasury_info.clone(),
+            ore_treasury_tokens_info.clone(),
+            ore_program.clone(),
             token_program.clone(),
         ],
         &[&[

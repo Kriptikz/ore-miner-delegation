@@ -236,7 +236,7 @@ pub fn open_managed_proof_boost(miner: Pubkey, mint: Pubkey) -> Instruction {
         accounts: vec![
             AccountMeta::new(miner, true),
             AccountMeta::new(managed_proof_address.0, false),
-            AccountMeta::new_readonly(boost_pda, false),
+            AccountMeta::new(boost_pda, false),
             AccountMeta::new_readonly(mint, false),
             AccountMeta::new(stake_pda, false),
             AccountMeta::new_readonly(system_program::ID, false),
@@ -398,10 +398,19 @@ pub fn delegate_boost_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey, amount: u6
     let managed_proof_token_account =
         get_associated_token_address(&managed_proof_address.0, &mint);
 
-    let boost_pda = boost_pda(mint);
-    let boost_tokens_address =
-        spl_associated_token_account::get_associated_token_address(&boost_pda.0, &mint);
-    let stake_pda = stake_pda(managed_proof_address.0, boost_pda.0);
+    let boost_address = boost_pda(mint).0;
+    let config_address = ore_boost_api::state::config_pda().0;
+    let deposits_address =
+        spl_associated_token_account::get_associated_token_address(&boost_address, &mint);
+
+    let config_proof_address = proof_pda(config_address).0;
+    let rewards_address = spl_associated_token_account::get_associated_token_address(
+        &config_address,
+        &ore_api::consts::MINT_ADDRESS,
+    );
+    let sender_address = spl_associated_token_account::get_associated_token_address(&managed_proof_address.0, &mint);
+    let stake_address = stake_pda(managed_proof_address.0, boost_address).0;
+
 
     Instruction {
         program_id: crate::id(),
@@ -411,13 +420,21 @@ pub fn delegate_boost_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey, amount: u6
             AccountMeta::new(managed_proof_address.0, false),
             AccountMeta::new(managed_proof_token_account, false),
             AccountMeta::new(delegated_boost_address.0, false),
-            AccountMeta::new(boost_pda.0, false),
+            AccountMeta::new(boost_address, false),
+            AccountMeta::new(config_address, false),
+            AccountMeta::new(deposits_address, false),
             AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(config_proof_address, false),
+            AccountMeta::new(rewards_address, false),
+            AccountMeta::new(sender_address, false),
             AccountMeta::new(staker_token_account, false),
-            AccountMeta::new(boost_tokens_address, false),
-            AccountMeta::new(stake_pda.0, false),
+            AccountMeta::new(stake_address, false),
             AccountMeta::new_readonly(ore_boost_api::id(), false),
+            AccountMeta::new_readonly(ore_api::consts::TREASURY_ADDRESS, false),
+            AccountMeta::new(ore_api::consts::TREASURY_TOKENS_ADDRESS, false),
+            AccountMeta::new_readonly(ore_api::ID, false),
             AccountMeta::new_readonly(spl_token::id(), false),
+
         ],
         data: [
             Instructions::DelegateBoostV2.to_vec(),
@@ -440,10 +457,18 @@ pub fn undelegate_boost_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey, amount: 
     let managed_proof_token_account =
         get_associated_token_address(&managed_proof_address.0, &mint);
 
-    let boost_pda = boost_pda(mint);
-    let boost_tokens_address =
-        spl_associated_token_account::get_associated_token_address(&boost_pda.0, &mint);
-    let stake_pda = stake_pda(managed_proof_address.0, boost_pda.0);
+    let boost_address = boost_pda(mint).0;
+    let config_address = ore_boost_api::state::config_pda().0;
+    let deposits_address =
+        spl_associated_token_account::get_associated_token_address(&boost_address, &mint);
+
+    let config_proof_address = proof_pda(config_address).0;
+    let rewards_address = spl_associated_token_account::get_associated_token_address(
+        &config_address,
+        &ore_api::consts::MINT_ADDRESS,
+    );
+    let sender_address = spl_associated_token_account::get_associated_token_address(&managed_proof_address.0, &mint);
+    let stake_address = stake_pda(managed_proof_address.0, boost_address).0;
 
     Instruction {
         program_id: crate::id(),
@@ -453,12 +478,19 @@ pub fn undelegate_boost_v2(staker: Pubkey, miner: Pubkey, mint: Pubkey, amount: 
             AccountMeta::new(managed_proof_address.0, false),
             AccountMeta::new(managed_proof_token_account, false),
             AccountMeta::new(delegated_boost_address.0, false),
-            AccountMeta::new(boost_pda.0, false),
+            AccountMeta::new(boost_address, false),
+            AccountMeta::new(config_address, false),
+            AccountMeta::new(deposits_address, false),
             AccountMeta::new_readonly(mint, false),
+            AccountMeta::new(config_proof_address, false),
+            AccountMeta::new(rewards_address, false),
+            AccountMeta::new(sender_address, false),
             AccountMeta::new(staker_token_account, false),
-            AccountMeta::new(boost_tokens_address, false),
-            AccountMeta::new(stake_pda.0, false),
+            AccountMeta::new(stake_address, false),
             AccountMeta::new_readonly(ore_boost_api::id(), false),
+            AccountMeta::new_readonly(ore_api::consts::TREASURY_ADDRESS, false),
+            AccountMeta::new(ore_api::consts::TREASURY_TOKENS_ADDRESS, false),
+            AccountMeta::new_readonly(ore_api::ID, false),
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: [
