@@ -10,6 +10,8 @@ pub enum OreDelegationError {
     CannotCloseAccountWithBalance,
     #[error("Init account fee payer must match provided payer")]
     CloseAccountFeePayerMissmatch,
+    #[error("Instruction has been removed")]
+    InstructionRemoved,
 }
 
 impl From<OreDelegationError> for solana_program::program_error::ProgramError {
